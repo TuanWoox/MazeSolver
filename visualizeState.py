@@ -1,8 +1,12 @@
 import sys
+import re
 import tkinter as tk
+from tkinter import simpledialog
 from queue import Queue
 import heapq
 import subprocess
+import os
+import startScreen
 
 class Node:
     def __init__(self, state, parent=None, action=None, cost=0, priority=0):
@@ -211,63 +215,76 @@ class MazeApp(tk.Tk):
     def __init__(self, maze):
         super().__init__()
         self.maze = maze
-        self.cell_size = 25
+        self.cell_size = 20  # Can be adjusted if needed
         self.title("Maze Solver")
-        self.canvas = tk.Canvas(self, width=self.maze.width * self.cell_size, height=self.maze.height * self.cell_size)
-        self.canvas.pack()
-        self.status_label = tk.Label(self, text="")
-        self.status_label.pack()
+        
+        # Calculate window dimensions based on maze size
+        window_width = max(self.maze.width * self.cell_size + 40, 600)
+        window_height = self.maze.height * self.cell_size + 150
+        self.configure(bg="#2c3e50")  # Set background color to match StartScreen
 
-        # Frame for buttons
-        self.button_frame = tk.Frame(self)
-        self.button_frame.pack(side="top")
+        # Center the window on the screen with calculated dimensions
+        self.center_window(window_width, window_height)
 
-        # Button to generate a new maze
-        self.generate_maze_button = tk.Button(self.button_frame, text="Generate Maze", command=self.generate_maze)
-        self.generate_maze_button.pack(side="left")
+        # Canvas and UI setup
+        self.canvas = tk.Canvas(self, width=self.maze.width * self.cell_size, height=self.maze.height * self.cell_size, bg="#2c3e50", highlightthickness=0)
+        self.canvas.grid(row=0, column=0, columnspan=6, pady=(20, 10), padx=10)
 
-        # Play mode button
-        self.play_button = tk.Button(self.button_frame, text="Play Mode", command=self.start_play_mode)
-        self.play_button.pack(side="left")
+        self.status_label = tk.Label(self, text="", font=("Helvetica", 12), fg="#ecf0f1", bg="#2c3e50")
+        self.status_label.grid(row=1, column=0, columnspan=6, pady=(5, 10))
 
-        # Buttons for different solve modes
-        self.solve_bfs_button = tk.Button(self.button_frame, text="Solve with BFS", command=self.solve_maze_bfs)
-        self.solve_bfs_button.pack(side="left")
+        # Button layout remains unchanged
+        button_style = {
+            "font": ("Helvetica", 12),
+            "fg": "#2c3e50",
+            "bg": "#ecf0f1",
+            "activebackground": "#bdc3c7",
+            "activeforeground": "#2c3e50",
+            "width": 15,
+            "height": 1,
+            "borderwidth": 0,
+            "relief": "raised",
+        }
 
-        self.solve_dfs_button = tk.Button(self.button_frame, text="Solve with DFS", command=self.solve_maze_dfs)
-        self.solve_dfs_button.pack(side="left")
+        # Buttons in a single row
+        tk.Button(self, text="Generate Maze", command=self.generate_maze, **button_style).grid(row=2, column=0, padx=5, pady=5)
+        tk.Button(self, text="Play Mode", command=self.start_play_mode, **button_style).grid(row=2, column=1, padx=5, pady=5)
+        tk.Button(self, text="Solve with BFS", command=self.solve_maze_bfs, **button_style).grid(row=2, column=2, padx=5, pady=5)
+        tk.Button(self, text="Solve with DFS", command=self.solve_maze_dfs, **button_style).grid(row=2, column=3, padx=5, pady=5)
+        tk.Button(self, text="Solve with A*", command=self.solve_maze_a_star, **button_style).grid(row=2, column=4, padx=5, pady=5)
+        tk.Button(self, text="Solve with Greedy", command=self.solve_maze_greedy, **button_style).grid(row=2, column=5, padx=5, pady=5)
+        
+        # Exit button in a separate row
+        tk.Button(self, text="Save Map", command=self.save_map, **button_style).grid(row=3, column=0, columnspan=3, pady=(10, 20))
+        tk.Button(self, text="Exit to Start Screen", command=self.exit_to_start_screen, **button_style).grid(row=3, column=3, columnspan=3, pady=(10, 20))
 
-        self.solve_a_star_button = tk.Button(self.button_frame, text="Solve with A*", command=self.solve_maze_a_star)
-        self.solve_a_star_button.pack(side="left")
-
-        self.solve_greedy_button = tk.Button(self.button_frame, text="Solve with Greedy", command=self.solve_maze_greedy)
-        self.solve_greedy_button.pack(side="left")
-
+        # Draw the initial maze layout
         self.draw_maze()
-
+    def center_window(self, width, height):
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x_position = (screen_width // 2) - (width // 2)
+        y_position = (screen_height // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x_position}+{y_position}")
     def generate_maze(self):
         # Call randomMaze.py to generate a new maze
-        subprocess.run(["python", "randomMaze.py"])  # Adjust if you're using a different command to run your script
+        subprocess.run(["python", "randomMaze.py"])
         self.maze = Maze("maze.txt")  # Reload the maze
         self.draw_maze()  # Refresh the maze display
         self.status_label.config(text="New maze generated!")
 
     def draw_maze(self):
-        # (Unchanged) Your existing draw_maze implementation
+        self.canvas.delete("all")
         for row in range(self.maze.height):
             for col in range(self.maze.width):
-                x1 = col * self.cell_size
-                y1 = row * self.cell_size
-                x2 = x1 + self.cell_size
-                y2 = y1 + self.cell_size
-                if self.maze.walls[row][col]:
-                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="black")
-                else:
-                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="white")
+                x1, y1 = col * self.cell_size, row * self.cell_size
+                x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+                color = "black" if self.maze.walls[row][col] else "white"
+                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline=color)
 
+        # Start and goal positions
         start_x, start_y = self.maze.start
         goal_x, goal_y = self.maze.goal
-
         self.canvas.create_oval(start_x * self.cell_size, start_y * self.cell_size,
                                 (start_x + 1) * self.cell_size, (start_y + 1) * self.cell_size, fill="green")
         self.canvas.create_oval(goal_x * self.cell_size, goal_y * self.cell_size,
@@ -275,73 +292,114 @@ class MazeApp(tk.Tk):
 
     def visualize(self, state):
         row, col = state
-        x1 = col * self.cell_size
-        y1 = row * self.cell_size
-        x2 = x1 + self.cell_size
-        y2 = y1 + self.cell_size
-        self.canvas.create_rectangle(x1, y1, x2, y2, fill="yellow")  # Color explored cells
+        x1, y1 = col * self.cell_size, row * self.cell_size
+        x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="yellow", outline="yellow")
         self.update()
-        self.after(10)  # Pause for a moment to visualize
+        self.after(10)
 
     def draw_path(self, path):
         for cell in path:
             row, col = cell
-            x1 = col * self.cell_size
-            y1 = row * self.cell_size
-            x2 = x1 + self.cell_size
-            y2 = y1 + self.cell_size
-            self.canvas.create_rectangle(x1, y1, x2, y2, fill="blue")  # Color path cells
+            x1, y1 = col * self.cell_size, row * self.cell_size
+            x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill="blue", outline="blue")
             self.update()
-            self.after(10)  # Pause for a moment to visualize
+            self.after(10)
 
     def clear_cells(self):
-        # Clear all non-wall cells to white
         for row in range(self.maze.height):
             for col in range(self.maze.width):
-                if not self.maze.walls[row][col]:  # Check if the cell is not a wall
-                    x1 = col * self.cell_size
-                    y1 = row * self.cell_size
-                    x2 = x1 + self.cell_size
-                    y2 = y1 + self.cell_size
-                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="white")  # Clear cell
+                if not self.maze.walls[row][col]:
+                    x1, y1 = col * self.cell_size, row * self.cell_size
+                    x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="white", outline="white")
         self.update()
 
     def solve_maze_bfs(self):
-        self.clear_cells()  # Clear all cells to white before solving
+        self.clear_cells()
         self.solve_maze(self.maze.bfs_solve, "BFS")
 
     def solve_maze_dfs(self):
-        self.clear_cells()  # Clear all cells to white before solving
+        self.clear_cells()
         self.solve_maze(self.maze.dfs_solve, "DFS")
 
     def solve_maze_a_star(self):
-        self.clear_cells()  # Clear all cells to white before solving
+        self.clear_cells()
         self.solve_maze(self.maze.a_star_solve, "A*")
 
     def solve_maze_greedy(self):
-        self.clear_cells()  # Clear all cells to white before solving
+        self.clear_cells()
         self.solve_maze(self.maze.greedy_solve, "Greedy")
 
     def solve_maze(self, solve_method, method_name):
         self.status_label.config(text=f"Solving with {method_name}...")
         self.update()
         try:
-            # First, explore the maze
             explored_path = solve_method(self.visualize)
-            # Now, draw the path found
             self.draw_path(explored_path)
-            # Assuming the maze object has these attributes
-            num_explored = self.maze.num_explored  # Number of explored states
-            steps_to_goal = len(explored_path)  # Assuming this gives the path length
+            num_explored = self.maze.num_explored
+            steps_to_goal = len(explored_path)
             self.status_label.config(text=f"Solving with {method_name}, Explored States: {num_explored}, Steps to Goal: {steps_to_goal}")
         except Exception as e:
             self.status_label.config(text=str(e))
 
+    def save_map(self):
+        # Ensure the './save' directory exists
+        save_dir = "./save"
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        # Prompt for filename
+        filename = simpledialog.askstring("Save Map", "Enter filename (leave blank for default):")
+
+        # Use default naming convention if no filename is provided
+        if not filename:
+            # Count existing map files in the save directory to set the next default filename
+            existing_maps = [f for f in os.listdir(save_dir) if f.startswith("map") and f.endswith(".txt")]
+            next_map_number = len(existing_maps) + 1
+            filename = f"map{next_map_number}.txt"
+        else:
+            # Replace disallowed characters and ensure ".txt" extension
+            filename = re.sub(r'[<>:"/\\|?*]', '', filename).strip()  # Remove disallowed characters
+            if not filename.endswith(".txt"):
+                filename += ".txt"
+
+        # Create map file content
+        map_content = []
+        for i in range(self.maze.height):
+            line = "".join(
+                "A" if (i, j) == self.maze.start else
+                "B" if (i, j) == self.maze.goal else
+                " " if not self.maze.walls[i][j] else "#"
+                for j in range(self.maze.width)
+            )
+            map_content.append(line)
+
+        # Define the full path for the save file
+        file_path = os.path.join(save_dir, filename)
+
+        # Save the content to a file
+        with open(file_path, "w") as f:
+            f.write("\n".join(map_content))
+
+        # Update the status label to confirm the save
+        self.status_label.config(text=f"Map saved as '{file_path}'")
+
+
     def start_play_mode(self):
-        # Implement the play mode logic
+        # Implement play mode logic if needed
         pass
 
+    def exit_to_start_screen(self):
+        self.destroy()
+        start_screen = startScreen.StartScreen()  # Reopen the start screen
+        start_screen.mainloop()
+
+
+
 if __name__ == "__main__":
+    print("Initializing Maze...")
     maze_file = "maze.txt"  # Replace with the path to your maze file
     maze = Maze(maze_file)
     app = MazeApp(maze)

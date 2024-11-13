@@ -71,5 +71,3 @@ maze_start, maze_goal = (0, 0), (maze_width - 1, maze_height - 1)
 maze = generate_complex_maze(maze_width, maze_height, maze_start, maze_goal)
 maze_path = "maze.txt"
 save_maze_to_file(maze, maze_path)
-
-print(f"Maze saved to {maze_path}")
