@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox
-import subprocess
-import visualizeState
 import os
+import subprocess
+import visualizeState  # Assuming this handles the maze visualization
+import random
+from drawCustomMap import DrawCustomMap
 
 class StartScreen(tk.Tk):
     def __init__(self):
@@ -16,20 +18,6 @@ class StartScreen(tk.Tk):
 
         banner = tk.Label(self, text="Maze Solver Game", font=("Helvetica", 28, "bold"), fg="#ecf0f1", bg="#2c3e50")
         banner.pack(pady=30)
-
-        # Member info display
-        member_info = [
-            "Bach Duc Canh - 22110012",
-            "Nguyen Tien Toan - 22110078",
-            "Ly Dang Trieu - 22110080",
-            "Nguyen Tuan Vu - 22110091",
-        ]
-        info_frame = tk.Frame(self, bg="#2c3e50")
-        info_frame.pack(pady=10)
-        
-        for member in member_info:
-            label = tk.Label(info_frame, text=member, font=("Helvetica", 14), fg="#bdc3c7", bg="#2c3e50")
-            label.pack(anchor="w", padx=20)
 
         # Button configurations
         button_style = {
@@ -50,6 +38,9 @@ class StartScreen(tk.Tk):
         load_map_button = tk.Button(self, text="Play with Loaded Map", command=self.open_map_selector, **button_style)
         load_map_button.pack(pady=10)
 
+        draw_map_button = tk.Button(self, text="Draw Custom Map", command=self.draw_custom_map, **button_style)
+        draw_map_button.pack(pady=10)
+
         exit_button = tk.Button(self, text="Exit Game", command=self.destroy, **button_style)
         exit_button.pack(pady=10)
 
@@ -60,19 +51,28 @@ class StartScreen(tk.Tk):
         y_position = (screen_height // 2) - (height // 2)
         self.geometry(f"{width}x{height}+{x_position}+{y_position}")
 
+    def draw_custom_map(self):
+        DrawCustomMap(self)  # Create an instance of DrawCustomMap and pass the main window
+
     def play_with_random_map(self):
+        self.destroy();
+        
+        # Running randomMaze.py to generate a random maze
         subprocess.run(["python", "randomMaze.py"])
-        self.destroy()
         maze_file = "maze.txt"
-        maze = visualizeState.Maze(maze_file)
-        app = visualizeState.MazeApp(maze)
-        app.mainloop()
+        
+        if os.path.exists(maze_file):
+            # Visualize the generated maze
+            maze = visualizeState.Maze(maze_file)
+            app = visualizeState.MazeApp(maze)
+            app.mainloop()
+        else:
+            messagebox.showerror("Error", "Failed to generate random maze!")
 
     def open_map_selector(self):
-        map_selector = tk.Toplevel(self)  # Initialize map_selector here
+        map_selector = tk.Toplevel(self)
         map_selector.title("Select a Map")
         
-        # Set window dimensions and center it on the screen
         window_width, window_height = 300, 400
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
@@ -81,14 +81,12 @@ class StartScreen(tk.Tk):
         map_selector.geometry(f"{window_width}x{window_height}+{x}+{y}")
         map_selector.configure(bg="#34495e")
 
-        # Display maps in the './save' directory
         label = tk.Label(map_selector, text="Available Maps:", font=("Helvetica", 16, "bold"), fg="#ecf0f1", bg="#34495e")
         label.pack(pady=10)
 
-        # List available map files from './save'
         save_dir = "./save"
         if not os.path.exists(save_dir):
-            os.makedirs(save_dir)  # Ensure the './save' directory exists
+            os.makedirs(save_dir)
 
         for file in os.listdir(save_dir):
             if file.endswith(".txt"):
@@ -98,12 +96,20 @@ class StartScreen(tk.Tk):
                 button.pack(pady=5)
 
     def load_selected_map(self, filename, map_selector_window):
+        # Close the map selector window
         map_selector_window.destroy()
-        self.destroy()
+
+        # Initialize the maze with the selected file
         maze = visualizeState.Maze(filename)
+
+        # Open the maze visualization in a new window
         app = visualizeState.MazeApp(maze)
+
+        # Start the Tkinter main loop for the maze visualization
         app.mainloop()
 
+
+
 if __name__ == "__main__":
-    start_screen = StartScreen()
-    start_screen.mainloop()
+    app = StartScreen()
+    app.mainloop()

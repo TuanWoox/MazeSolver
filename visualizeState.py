@@ -287,9 +287,9 @@ class MazeApp(tk.Tk):
         self.cell_size = 20  # Can be adjusted if needed
         self.title("Maze Solver")
         
-        # Calculate window dimensions based on maze size
-        window_width = max(self.maze.width * self.cell_size + 40, 600)
-        window_height = self.maze.height * self.cell_size + 150
+        # Calculate window dimensions for a 15-inch screen (approx 1440px width)
+        window_width = min(self.maze.width * self.cell_size + 40, 1440)
+        window_height = self.maze.height * self.cell_size + 200
         self.configure(bg="#2c3e50")  # Set background color to match StartScreen
 
         # Center the window on the screen with calculated dimensions
@@ -349,17 +349,20 @@ class MazeApp(tk.Tk):
             row=3, column=5, padx=5, pady=5
         )
 
-
-
         # Draw the initial maze layout
         self.draw_maze()
-    
     def center_window(self, width, height):
+        # Get the screen width and height
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-        x_position = (screen_width // 2) - (width // 2)
-        y_position = (screen_height // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x_position}+{y_position}")
+
+        # Calculate the position to center the window
+        position_top = int(screen_height / 2 - height / 2)
+        position_right = int(screen_width / 2 - width / 2)
+
+        # Set the position of the window
+        self.geometry(f'{width}x{height}+{position_right}+{position_top}')
+        
     def generate_maze(self):
         # Call randomMaze.py to generate a new maze
         subprocess.run(["python", "randomMaze.py"])
