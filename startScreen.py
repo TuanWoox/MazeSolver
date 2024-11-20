@@ -44,8 +44,8 @@ class StartScreen(tk.Tk):
         }
 
         # Add buttons with hover effects
-        self.create_hover_button("Play with Random Map", self.play_with_random_map, button_style)
-        self.create_hover_button("Play with Loaded Map", self.open_map_selector, button_style)
+
+        self.create_hover_button("Play", self.open_map_selector, button_style)
         self.create_hover_button("Draw Custom Map", self.draw_custom_map, button_style)
         self.create_hover_button("Exit Game", self.destroy, button_style)
 
@@ -119,41 +119,82 @@ class StartScreen(tk.Tk):
         map_selector = tk.Toplevel(self)
         map_selector.title("Select a Map")
 
-        window_width, window_height = 300, 400
+        # Remove border and extra padding
+        map_selector.configure(bg="#34495e", bd=0, highlightthickness=0)
+
+        # Set window size and position
+        window_width, window_height = 600, 700
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x = (screen_width // 2) - (window_width // 2)
         y = (screen_height // 2) - (window_height // 2)
         map_selector.geometry(f"{window_width}x{window_height}+{x}+{y}")
-        map_selector.configure(bg="#34495e")
 
+        # Label for the map selector
         label = tk.Label(
             map_selector,
             text="Available Maps:",
-            font=("Helvetica", 16, "bold"),
+            font=("Helvetica", 18, "bold"),
             fg="#ecf0f1",
             bg="#34495e",
         )
-        label.pack(pady=10)
+        label.pack(pady=20)
 
         save_dir = "./save"
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
+        # Create a canvas and a scrollbar
+        canvas = tk.Canvas(map_selector, bg="#34495e", bd=0, highlightthickness=0)
+        scrollbar = tk.Scrollbar(map_selector, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Create a frame to hold map buttons
+        button_frame = tk.Frame(canvas, bg="#34495e", bd=0, highlightthickness=0)
+        canvas.create_window((0, 0), window=button_frame, anchor="nw")
+        scrollbar.pack(side="right", fill="y", padx=5)
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Loop through files in the save directory and create buttons for them
         for file in os.listdir(save_dir):
             if file.endswith(".txt"):
                 map_name = file.replace(".txt", "")
                 button = tk.Button(
-                    map_selector,
+                    button_frame,
                     text=map_name,
                     font=("Helvetica", 14),
                     fg="#2c3e50",
                     bg="#ecf0f1",
+                    relief="flat",
+                    padx=10,
+                    pady=10,
+                    activebackground="#16a085",  # Hover color
+                    activeforeground="white",
                     command=lambda f=file: self.load_selected_map(
                         os.path.join(save_dir, f), map_selector, self
                     ),
                 )
-                button.pack(pady=5)
+                button.pack(pady=10, fill="x", padx=20)
+
+        # Update the canvas scroll region
+        button_frame.update_idletasks()  # Ensure the button_frame is fully rendered
+        canvas.config(scrollregion=canvas.bbox("all"))
+
+        # Play with Random Map button always at the bottom-right
+        random_button = tk.Button(
+            map_selector,
+            text="Random Map",
+            font=("Helvetica", 14),
+            fg="#2c3e50",
+            bg="#ecf0f1",
+            relief="flat",
+            padx=10,
+            pady=10,
+            activebackground="#16a085",
+            activeforeground="white",
+            command=self.play_with_random_map
+        )
+        random_button.pack(side="bottom", anchor="e", padx=20, pady=20)  # Right-align at bottom
 
     def load_selected_map(self, filename, map_selector_window, startScreen):
         # Close the map selector window
