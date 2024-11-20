@@ -1,216 +1,188 @@
-import tkinter as tk
-from tkinter import messagebox
+import sys
 import os
-import subprocess
-import visualizeState  # Assuming this handles the maze visualization
-from drawCustomMap import DrawCustomMap
+from PyQt5.QtWidgets import (
+    QApplication,
+    QLabel,
+    QPushButton,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QFileDialog,
+    QMessageBox,
+)
+from PyQt5.QtGui import QPixmap, QMovie
+from PyQt5.QtCore import Qt
+import tkinter as tk
+from tkinter import Tk, Toplevel, Label, Button
+from tkinter import messagebox
+import visualizeState  # Assuming this handles maze visualization
+from drawCustomMap import DrawCustomMap  # Assuming this is the custom map module
 
 
-class StartScreen(tk.Tk):
-    def __init__(self):
+class MazeSolverApp(QMainWindow):
+    def __init__(self, bg_image_path):
         super().__init__()
-        self.title("Maze Solver Game")
-        self.geometry("500x650")
-        self.configure(bg="#2c3e50")
+        self.setWindowTitle("Maze Solver")
+        self.setFixedSize(1200, 800)  # Set window size
 
-        # Center the window on the screen
-        self.center_window(500, 650)
+        # Central widget and layout
+        self.central_widget = QWidget(self)
+        self.setCentralWidget(self.central_widget)
+        self.layout = QVBoxLayout(self.central_widget)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setAlignment(Qt.AlignCenter)
 
-        # Display team members
-        self.create_team_section()
+        # Background setup
+        self.background_label = QLabel(self.central_widget)
+        if bg_image_path.endswith(".gif"):
+            self.movie = QMovie(bg_image_path)
+            self.background_label.setMovie(self.movie)
+            self.movie.start()
+        else:
+            pixmap = QPixmap(bg_image_path)
+            self.background_label.setPixmap(pixmap)
 
-        # Game title banner
-        banner = tk.Label(
-            self,
-            text="Maze Solver Game",
-            font=("Helvetica", 28, "bold"),
-            fg="#ecf0f1",
-            bg="#2c3e50",
-            pady=10,
+        self.background_label.setScaledContents(True)
+        self.background_label.setGeometry(0, 0, 1200, 800)
+
+        # Overlay widgets
+        self.overlay_widget = QWidget(self.central_widget)
+        self.overlay_layout = QVBoxLayout(self.overlay_widget)
+        self.overlay_layout.setAlignment(Qt.AlignCenter)
+        self.overlay_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Title label
+        self.title_label = QLabel("Maze Solver", self.overlay_widget)
+        self.title_label.setStyleSheet(
+            "font-size: 60px; font-weight: bold; color: white; background: transparent;"
         )
-        banner.pack(pady=20)
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self.overlay_layout.addWidget(self.title_label)
 
-        # Button configurations
-        button_style = {
-            "font": ("Helvetica", 14),
-            "fg": "#2c3e50",
-            "bg": "#ecf0f1",
-            "activebackground": "#dcdde1",
-            "activeforeground": "#2c3e50",
-            "width": 20,
-            "height": 2,
-            "borderwidth": 0,
-            "relief": "raised",
-        }
-
-        # Add buttons with hover effects
-
-        self.create_hover_button("Play", self.open_map_selector, button_style)
-        self.create_hover_button("Draw Custom Map", self.draw_custom_map, button_style)
-        self.create_hover_button("Exit Game", self.destroy, button_style)
-
-    def create_team_section(self):
-        """Creates a neatly styled team member section at the top."""
-        team_frame = tk.Frame(self, bg="#34495e", padx=10, pady=10)
-        team_frame.pack(fill=tk.X, pady=(10, 0))
-
-        team_label = tk.Label(
-            team_frame,
-            text="Team Members:",
-            font=("Helvetica", 16, "bold"),
-            fg="#ecf0f1",
-            bg="#34495e",
+        # Team members label
+        self.team_label = QLabel(
+            "Team Members:\nNguyễn Tiến Toàn - 22110078\nBạch Đức Cảnh - 22110012\n"
+            "Nguyễn Tuấn Vũ - 22110091\nLý Đăng Triều - 22110080",
+            self.overlay_widget,
         )
-        team_label.pack(anchor="w", padx=10)
+        self.team_label.setStyleSheet(
+            "font-size: 20px; color: white; background: transparent;"
+        )
+        self.team_label.setAlignment(Qt.AlignCenter)
+        self.overlay_layout.addWidget(self.team_label)
 
-        team_members = [
-            "Nguyễn Tiến Toàn - 22110078",
-            "Bạch Đức Cảnh - 22110012",
-            "Nguyễn Tuấn Vũ - 22110091",
-            "Lý Đăng Triều - 22110080",
-        ]
-        for member in team_members:
-            member_label = tk.Label(
-                team_frame,
-                text=member,
-                font=("Helvetica", 14),
-                fg="#ecf0f1",
-                bg="#34495e",
-                anchor="w",
-            )
-            member_label.pack(fill=tk.X, padx=20, pady=2)
+        # Add buttons
+        self.add_button("Play with Random Map", self.play_with_random_map)
+        self.add_button("Play with Loaded Map", self.open_map_selector)
+        self.add_button("Draw Custom Map", self.draw_custom_map)
+        self.add_button("Exit Game", self.close)
 
-    def create_hover_button(self, text, command, button_style):
-        """Creates a button with hover effects."""
-        button = tk.Button(self, text=text, command=command, **button_style)
-        button.pack(pady=10)
+        # Add overlay layout to main layout
+        self.layout.addWidget(self.overlay_widget)
 
-        # Add hover effects
-        button.bind("<Enter>", lambda e: button.configure(bg="#dcdde1"))
-        button.bind("<Leave>", lambda e: button.configure(bg="#ecf0f1"))
-
-    def center_window(self, width, height):
-        """Centers the window on the screen."""
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        x_position = (screen_width // 2) - (width // 2)
-        y_position = (screen_height // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x_position}+{y_position}")
-
-    def draw_custom_map(self):
-        DrawCustomMap(self)  # Create an instance of DrawCustomMap and pass the main window
+    def add_button(self, text, command):
+        button = QPushButton(text, self.overlay_widget)
+        button.setStyleSheet(
+            """
+            QPushButton {
+                font-size: 20px; 
+                color: black; 
+                background: rgba(255, 255, 255, 0.8); 
+                border: 2px solid black;
+                border-radius: 10px;
+                padding: 10px;
+            }
+            QPushButton:hover {
+                background: rgba(200, 200, 200, 0.9);
+            }
+            QPushButton:pressed {
+                background: rgba(150, 150, 150, 0.9);
+            }
+            """
+        )
+        button.setFixedSize(300, 60)
+        button.clicked.connect(command)
+        self.overlay_layout.addWidget(button)
 
     def play_with_random_map(self):
-        self.destroy()
-
-        # Running randomMaze.py to generate a random maze
-        subprocess.run(["python", "randomMaze.py"])
-        maze_file = "maze.txt"
-
+        # Run the maze visualization
+        maze_file = "maze.txt"  # Example random maze file
         if os.path.exists(maze_file):
-            # Visualize the generated maze
             maze = visualizeState.Maze(maze_file)
-            app = visualizeState.MazeApp(maze)
-            app.mainloop()
+            visualizeState.MazeApp(maze).mainloop()
         else:
-            messagebox.showerror("Error", "Failed to generate random maze!")
+            QMessageBox.critical(self, "Error", "Random maze file not found!")
+
+    def draw_custom_map(self):
+        # Initialize a hidden root Tkinter window
+        root = tk.Tk()
+        root.withdraw()  # Hide the root window
+
+        # Launch the custom map drawing tool with `root` as the master
+        DrawCustomMap(root)
+
 
     def open_map_selector(self):
-        map_selector = tk.Toplevel(self)
-        map_selector.title("Select a Map")
+        # Initialize a hidden root Tkinter window
+        root = tk.Tk()
+        root.withdraw()  # Hide the root window
 
-        # Remove border and extra padding
-        map_selector.configure(bg="#34495e", bd=0, highlightthickness=0)
-
-        # Set window size and position
-        window_width, window_height = 600, 700
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        x = (screen_width // 2) - (window_width // 2)
-        y = (screen_height // 2) - (window_height // 2)
-        map_selector.geometry(f"{window_width}x{window_height}+{x}+{y}")
-
-        # Label for the map selector
-        label = tk.Label(
-            map_selector,
-            text="Available Maps:",
-            font=("Helvetica", 18, "bold"),
-            fg="#ecf0f1",
-            bg="#34495e",
-        )
-        label.pack(pady=20)
-
+        # Save directory for maps
         save_dir = "./save"
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        # Create a canvas and a scrollbar
-        canvas = tk.Canvas(map_selector, bg="#34495e", bd=0, highlightthickness=0)
-        scrollbar = tk.Scrollbar(map_selector, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scrollbar.set)
+        # Create a Toplevel window for map selection
+        map_selector = tk.Toplevel(root)
+        map_selector.title("Select a Map")
+        map_selector.geometry("300x400")
+        map_selector.configure(bg="#34495e")
 
-        # Create a frame to hold map buttons
-        button_frame = tk.Frame(canvas, bg="#34495e", bd=0, highlightthickness=0)
-        canvas.create_window((0, 0), window=button_frame, anchor="nw")
-        scrollbar.pack(side="right", fill="y", padx=5)
-        canvas.pack(side="left", fill="both", expand=True)
+        # Add a label for available maps
+        tk.Label(
+            map_selector,
+            text="Available Maps:",
+            font=("Helvetica", 16, "bold"),
+            fg="#ecf0f1",
+            bg="#34495e",
+        ).pack(pady=10)
 
-        # Loop through files in the save directory and create buttons for them
+        # Dynamically create buttons for each map file
         for file in os.listdir(save_dir):
             if file.endswith(".txt"):
-                map_name = file.replace(".txt", "")
-                button = tk.Button(
-                    button_frame,
-                    text=map_name,
+                tk.Button(
+                    map_selector,
+                    text=file.replace(".txt", ""),
                     font=("Helvetica", 14),
                     fg="#2c3e50",
                     bg="#ecf0f1",
-                    relief="flat",
-                    padx=10,
-                    pady=10,
-                    activebackground="#16a085",  # Hover color
-                    activeforeground="white",
                     command=lambda f=file: self.load_selected_map(
-                        os.path.join(save_dir, f), map_selector, self
+                        os.path.join(save_dir, f), map_selector, root
                     ),
-                )
-                button.pack(pady=10, fill="x", padx=20)
+                ).pack(pady=5)
 
-        # Update the canvas scroll region
-        button_frame.update_idletasks()  # Ensure the button_frame is fully rendered
-        canvas.config(scrollregion=canvas.bbox("all"))
+        # Make the map selector modal
+        map_selector.transient(root)  # Set parent window
+        map_selector.grab_set()       # Block interaction with other windows
+        map_selector.wait_window()    # Wait until the map selector is closed
 
-        # Play with Random Map button always at the bottom-right
-        random_button = tk.Button(
-            map_selector,
-            text="Random Map",
-            font=("Helvetica", 14),
-            fg="#2c3e50",
-            bg="#ecf0f1",
-            relief="flat",
-            padx=10,
-            pady=10,
-            activebackground="#16a085",
-            activeforeground="white",
-            command=self.play_with_random_map
-        )
-        random_button.pack(side="bottom", anchor="e", padx=20, pady=20)  # Right-align at bottom
 
-    def load_selected_map(self, filename, map_selector_window, startScreen):
-        # Close the map selector window
-        map_selector_window.destroy()
-        startScreen.destroy()
 
-        # Initialize the maze with the selected file
-        maze = visualizeState.Maze(filename)
+    def load_selected_map(self, file_path, map_selector, root):
+        # Close the map selector and root windows
+        map_selector.destroy()
+        root.destroy()
 
-        # Open the maze visualization in a new window
-        app = visualizeState.MazeApp(maze)
-
-        # Start the Tkinter main loop for the maze visualization
-        app.mainloop()
-
+        if os.path.exists(file_path):
+            # Initialize the maze visualization
+            maze = visualizeState.Maze(file_path)
+            visualizeState.MazeApp(maze).mainloop()
+        else:
+            QMessageBox.critical(self, "Error", "Map file not found!")
 
 if __name__ == "__main__":
-    app = StartScreen()
-    app.mainloop()
+    bg_image_path = "background.gif"  # Replace with your GIF or image path
+    app = QApplication(sys.argv)
+    window = MazeSolverApp(bg_image_path)
+    window.show()
+    sys.exit(app.exec_())

@@ -8,6 +8,8 @@ import subprocess
 import os
 import startScreen
 
+bg_image_path = "background.jpg"
+
 class Node:
     def __init__(self, state, parent=None, action=None, cost=0, priority=0):
         self.state = state
@@ -283,6 +285,7 @@ class Maze:
 class MazeApp(tk.Tk):
     def __init__(self, maze):
         super().__init__()
+        self.attributes("-fullscreen", True) 
         self.maze = maze
         self.cell_size = 20  # Can be adjusted if needed
         self.title("Maze Solver")
@@ -646,7 +649,7 @@ class MazeApp(tk.Tk):
 
     def exit_to_start_screen(self):
         self.destroy()
-        start_screen = startScreen.StartScreen()  # Reopen the start screen
+        start_screen = startScreen.StartScreen(bg_image_path)  # Reopen the start screen
         start_screen.mainloop()
 
 
