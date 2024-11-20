@@ -9,14 +9,14 @@ from PyQt5.QtWidgets import (
     QWidget,
     QFileDialog,
     QMessageBox,
+    QDialog,
 )
 from PyQt5.QtGui import QPixmap, QMovie
 from PyQt5.QtCore import Qt
-import tkinter as tk
-from tkinter import Tk, Toplevel, Label, Button
-from tkinter import messagebox
-import visualizeState  # Assuming this handles maze visualization
-from drawCustomMap import DrawCustomMap  # Assuming this is the custom map module
+
+from MapSelectorDialog import MapSelectorDialog  # Import the separate class
+import visualizeState
+from drawCustomMap import DrawCustomMap
 
 
 class MazeSolverApp(QMainWindow):
@@ -105,7 +105,6 @@ class MazeSolverApp(QMainWindow):
         self.overlay_layout.addWidget(button)
 
     def play_with_random_map(self):
-        # Run the maze visualization
         maze_file = "maze.txt"  # Example random maze file
         if os.path.exists(maze_file):
             maze = visualizeState.Maze(maze_file)
@@ -114,71 +113,31 @@ class MazeSolverApp(QMainWindow):
             QMessageBox.critical(self, "Error", "Random maze file not found!")
 
     def draw_custom_map(self):
-        # Initialize a hidden root Tkinter window
-        root = tk.Tk()
-        root.withdraw()  # Hide the root window
-
-        # Launch the custom map drawing tool with `root` as the master
-        DrawCustomMap(root)
+        # Check if the custom map window is already open
+        if hasattr(self, 'custom_map_window') and self.custom_map_window.isVisible():
+            self.custom_map_window.activateWindow()
+        else:
+            self.custom_map_window = DrawCustomMap()
+            self.custom_map_window.show()
 
 
     def open_map_selector(self):
-        # Initialize a hidden root Tkinter window
-        root = tk.Tk()
-        root.withdraw()  # Hide the root window
-
-        # Save directory for maps
         save_dir = "./save"
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        # Create a Toplevel window for map selection
-        map_selector = tk.Toplevel(root)
-        map_selector.title("Select a Map")
-        map_selector.geometry("300x400")
-        map_selector.configure(bg="#34495e")
+        dialog = MapSelectorDialog(save_dir, self)
+        if dialog.exec_() == QDialog.Accepted:
+            selected_map = dialog.selected_map
+            self.load_selected_map(selected_map)
 
-        # Add a label for available maps
-        tk.Label(
-            map_selector,
-            text="Available Maps:",
-            font=("Helvetica", 16, "bold"),
-            fg="#ecf0f1",
-            bg="#34495e",
-        ).pack(pady=10)
-
-        # Dynamically create buttons for each map file
-        for file in os.listdir(save_dir):
-            if file.endswith(".txt"):
-                tk.Button(
-                    map_selector,
-                    text=file.replace(".txt", ""),
-                    font=("Helvetica", 14),
-                    fg="#2c3e50",
-                    bg="#ecf0f1",
-                    command=lambda f=file: self.load_selected_map(
-                        os.path.join(save_dir, f), map_selector, root
-                    ),
-                ).pack(pady=5)
-
-        # Make the map selector modal
-        map_selector.transient(root)  # Set parent window
-        map_selector.grab_set()       # Block interaction with other windows
-        map_selector.wait_window()    # Wait until the map selector is closed
-
-
-
-    def load_selected_map(self, file_path, map_selector, root):
-        # Close the map selector and root windows
-        map_selector.destroy()
-        root.destroy()
-
+    def load_selected_map(self, file_path):
         if os.path.exists(file_path):
-            # Initialize the maze visualization
             maze = visualizeState.Maze(file_path)
             visualizeState.MazeApp(maze).mainloop()
         else:
             QMessageBox.critical(self, "Error", "Map file not found!")
+
 
 if __name__ == "__main__":
     bg_image_path = "background.gif"  # Replace with your GIF or image path

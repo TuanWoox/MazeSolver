@@ -1,142 +1,183 @@
-import tkinter as tk
+import sys
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QLabel, QGridLayout, QMessageBox
+)
+from PyQt5.QtGui import QColor, QPainter, QPen
+from PyQt5.QtCore import Qt, QRect, QTimer
 import os
-from tkinter import messagebox
 
-class DrawCustomMap:
-    def __init__(self, master):
-        self.master = master
-        self.draw_window = tk.Toplevel(self.master)
-        self.draw_window.title("Draw Your Map")
+class DrawCustomMap(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Draw Your Map")
+        self.setMinimumSize(1000, 800)  # Adjust minimum size for responsiveness
 
-        # Set canvas size based on 27x14 grid and grid size (20px per cell)
-        canvas_width, canvas_height = 55 * 20, 27 * 20
-        self.grid_size = 20  # 20px per grid cell
+        # Main layout
+        self.central_widget = QWidget(self)
+        self.setCentralWidget(self.central_widget)
+        self.layout = QVBoxLayout(self.central_widget)
+        self.layout.setContentsMargins(20, 20, 20, 20)  # Add margins for spacing
+        self.layout.setSpacing(20)
 
-        # Center the draw window
-        screen_width = self.draw_window.winfo_screenwidth()
-        screen_height = self.draw_window.winfo_screenheight()
-        x = (screen_width - canvas_width) // 2
-        y = (screen_height - canvas_height) // 2
-        self.draw_window.geometry(f"{canvas_width}x{canvas_height+100}+{x}+{y}")
+        # Instructions label
+        self.instructions = QLabel("Click and drag to toggle walls. Use 'Set Start' and 'Set Goal' to mark points.")
+        self.instructions.setAlignment(Qt.AlignCenter)
+        self.instructions.setStyleSheet("font-size: 18px; font-weight: bold; color: #2c3e50;")
+        self.layout.addWidget(self.instructions)
 
-        # Create the canvas for drawing
-        self.canvas = tk.Canvas(self.draw_window, width=canvas_width, height=canvas_height, bg="#ecf0f1")
-        self.canvas.pack()
+        # Canvas for grid
+        self.canvas = CustomCanvas(self)
+        self.layout.addWidget(self.canvas, stretch=1)
 
-        # Grid properties
-        self.grid = {}
+        # Button panel
+        self.button_layout = QGridLayout()
+        self.button_layout.setSpacing(15)
+        self.layout.addLayout(self.button_layout)
 
-        # Draw grid on the canvas for a 27x14 maze
-        for y in range(0, canvas_height, self.grid_size):
-            for x in range(0, canvas_width, self.grid_size):
-                rect = self.canvas.create_rectangle(x, y, x + self.grid_size, y + self.grid_size, outline="black", fill="white")
-                self.grid[rect] = ' '  # Initialize grid cells as empty
+        self.add_button("Add Walls", lambda: self.canvas.set_mode("add"), 0, 0)
+        self.add_button("Remove Walls", lambda: self.canvas.set_mode("remove"), 0, 1)
+        self.add_button("Set Start", lambda: self.canvas.set_mode("start"), 0, 2)
+        self.add_button("Set Goal", lambda: self.canvas.set_mode("goal"), 0, 3)
+        self.add_button("Clear Map", self.canvas.clear_map, 0, 4)
+        self.add_button("Save Map", self.canvas.save_map, 1, 0)
+        self.add_button("Exit", self.close, 1, 4)   
 
-        # Buttons to mark start and goal
-        self.current_marker = None
-        button_frame = tk.Frame(self.draw_window)
-        button_frame.pack(pady=5)
+    def add_button(self, text, command, row, col):
+        button = QPushButton(text)
+        button.setStyleSheet(
+            """
+            QPushButton {
+                font-size: 16px; 
+                color: black; 
+                background: #ecf0f1; 
+                border: 2px solid #34495e;
+                border-radius: 8px;
+                padding: 8px 12px;
+            }
+            QPushButton:hover {
+                background: #bdc3c7;
+            }
+            QPushButton:pressed {
+                background: #95a5a6;
+            }
+            """
+        )
+        button.clicked.connect(command)
+        self.button_layout.addWidget(button, row, col)
 
-        start_button = tk.Button(button_frame, text="Set Start", command=self.set_start)
-        start_button.pack(side=tk.LEFT, padx=5)
 
-        goal_button = tk.Button(button_frame, text="Set Goal", command=self.set_goal)
-        goal_button.pack(side=tk.LEFT, padx=5)
+class CustomCanvas(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.current_mode = None  # Track the current mode: 'add', 'remove', 'start', 'goal'
+        self.grid_size = 20  # Initial size for cells
+        self.rows = 27
+        self.cols = 55
+        self.cell_states = [[' ' for _ in range(self.cols)] for _ in range(self.rows)]
+        self.start_pos = None
+        self.goal_pos = None
+        self.dragging = False
+        self.setMouseTracking(True)
 
-        # Save button
-        save_button = tk.Button(button_frame, text="Save Map", command=self.save_custom_map)
-        save_button.pack(side=tk.LEFT, padx=5)
+        # Initialize resize timer
+        self.resize_timer = QTimer()
+        self.resize_timer.setSingleShot(True)
+        self.resize_timer.timeout.connect(self.resize_grid)  # Connect to resize grid method
 
-        # Bind mouse click event to toggle wall, space, start, and goal
-        self.canvas.bind("<Button-1>", self.toggle_cell)
+    def set_mode(self, mode):
+        """Set the current mode for interaction."""
+        self.current_mode = mode
+
+    def mousePressEvent(self, event):
+        self.dragging = True
+        self.handle_cell(event.x(), event.y())
+
+    def mouseMoveEvent(self, event):
+        if self.dragging:
+            self.handle_cell(event.x(), event.y())
+
+    def mouseReleaseEvent(self, event):
+        self.dragging = False
+
+    def handle_cell(self, x, y):
+        """Handle cell updates based on the current mode."""
+        col, row = x // self.grid_size, y // self.grid_size
+        if 0 <= col < self.cols and 0 <= row < self.rows:
+            if self.current_mode == "start":  # Set Start
+                if self.start_pos:
+                    old_col, old_row = self.start_pos
+                    self.cell_states[old_row][old_col] = ' '
+                self.cell_states[row][col] = 'A'
+                self.start_pos = (col, row)
+            elif self.current_mode == "goal":  # Set Goal
+                if self.goal_pos:
+                    old_col, old_row = self.goal_pos
+                    self.cell_states[old_row][old_col] = ' '
+                self.cell_states[row][col] = 'B'
+                self.goal_pos = (col, row)
+            elif self.current_mode == "add":  # Add Walls
+                self.cell_states[row][col] = '#'
+            elif self.current_mode == "remove":  # Remove Walls
+                self.cell_states[row][col] = ' '
+            self.update()  # Redraw canvas
+
+    def resizeEvent(self, event):
+        """Handle resizing of the canvas."""
+        self.resize_timer.start(100)  # Debounce resizing to avoid performance issues
+
+    def resize_grid(self):
+        """Resize the grid dynamically based on the canvas size."""
+        available_width = self.width()
+        available_height = self.height()
+        self.grid_size = min(available_width // self.cols, available_height // self.rows)
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setPen(QPen(Qt.black, 1))
+        for y in range(self.rows):
+            for x in range(self.cols):
+                rect = QRect(x * self.grid_size, y * self.grid_size, self.grid_size, self.grid_size)
+                if self.cell_states[y][x] == '#':
+                    painter.fillRect(rect, QColor("black"))
+                elif self.cell_states[y][x] == 'A':
+                    painter.fillRect(rect, QColor("green"))
+                elif self.cell_states[y][x] == 'B':
+                    painter.fillRect(rect, QColor("red"))
+                painter.drawRect(rect)
 
     def set_start(self):
-        # Toggle the start marker state
-        if self.current_marker == 'A':
-            self.remove_marker('A')  # Remove the start marker if it's already set
-            self.current_marker = None  # Reset the mode to placing walls
-        else:
-            self.remove_marker('A')  # Ensure only one start marker is set at a time
-            self.current_marker = 'A'  # Set the current marker to 'A' (start)
+        self.current_marker = 'A'
 
     def set_goal(self):
-        # Toggle the goal marker state
-        if self.current_marker == 'B':
-            self.remove_marker('B')  # Remove the goal marker if it's already set
-            self.current_marker = None  # Reset the mode to placing walls
-        else:
-            self.remove_marker('B')  # Ensure only one goal marker is set at a time
-            self.current_marker = 'B'  # Set the current marker to 'B' (goal)
+        self.current_marker = 'B'
 
-    def remove_marker(self, marker):
-        # Remove the marker from the grid (if it exists)
-        for rect, cell in self.grid.items():
-            if cell == marker:
-                self.canvas.itemconfig(rect, fill="white")
-                self.grid[rect] = ' '  # Reset the cell to empty
+    def clear_map(self):
+        self.cell_states = [[' ' for _ in range(self.cols)] for _ in range(self.rows)]
+        self.start_pos = None
+        self.goal_pos = None
+        self.update()
 
-    def toggle_cell(self, event):
-        x, y = event.x, event.y
-        # Find which cell was clicked
-        rect_id = self.canvas.find_closest(x, y)[0]
-        rect_coords = self.canvas.coords(rect_id)
-
-        # Toggle between wall ('#'), space (' '), start ('A') and goal ('B')
-        if self.current_marker is not None:
-            if self.grid[rect_id] == ' ' or self.grid[rect_id] == '#':  # If the cell is empty or a wall
-                if self.current_marker == 'A':  # If the current marker is 'A' (start)
-                    self.canvas.itemconfig(rect_id, fill="green")
-                elif self.current_marker == 'B':  # If the current marker is 'B' (goal)
-                    self.canvas.itemconfig(rect_id, fill="red")
-                self.grid[rect_id] = self.current_marker
-                self.current_marker = None  # Reset the marker after placing start/goal
-        else:
-            # If no marker is set, toggle between wall ('#') and space (' ')
-            if self.grid[rect_id] == ' ':
-                self.canvas.itemconfig(rect_id, fill="black")  # Wall color
-                self.grid[rect_id] = '#'
-            elif self.grid[rect_id] == '#':
-                self.canvas.itemconfig(rect_id, fill="white")  # Empty space
-                self.grid[rect_id] = ' '
-
-    def save_custom_map(self):
-        # Calculate the number of columns and rows based on the canvas size and grid size
-        width = self.canvas.winfo_width() // self.grid_size
-        height = self.canvas.winfo_height() // self.grid_size
-
-        # Initialize the maze with walls
-        maze = [['#' for _ in range(width)] for _ in range(height)]
-
-        start = None
-        goal = None
-
-        for rect, cell in self.grid.items():
-            rect_coords = self.canvas.coords(rect)
-            # Calculate the grid cell (x, y) from the rectangle coordinates
-            x = int(rect_coords[0] // self.grid_size)
-            y = int(rect_coords[1] // self.grid_size)
-
-            # Ensure the coordinates are within bounds
-            if 0 <= x < width and 0 <= y < height:
-                if cell == 'A':
-                    start = (x, y)
-                elif cell == 'B':
-                    goal = (x, y)
-                maze[y][x] = cell
-
-        # Ensure both start and goal are set
-        if start and goal:
-            # Save the maze to a file
-            save_dir = './save'
-            if not os.path.exists(save_dir):
-                os.makedirs(save_dir)
-
+    def save_map(self):
+        """Save the custom map to a directory './save'."""
+        if self.start_pos is None or self.goal_pos is None:
+            QMessageBox.critical(self, "Error", "Please set both the start and goal positions.")
+            return
+        try:
+            save_dir = "./save"
+            os.makedirs(save_dir, exist_ok=True)  # Create the directory if it doesn't exist
             file_path = os.path.join(save_dir, "custom_maze.txt")
             with open(file_path, "w") as f:
-                for row in maze:
-                    f.write(''.join(row) + '\n')
+                for row in self.cell_states:
+                    f.write("".join(row) + "\n")
+            QMessageBox.information(self, "Success", f"Your custom map has been saved to {file_path}!")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save the map: {str(e)}")
 
-            messagebox.showinfo("Maze Saved", "Your custom maze has been saved!")
-            self.draw_window.destroy()  # Close the drawing window
-        else:
-            messagebox.showerror("Error", "Please set both the start and goal positions.")
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = DrawCustomMap()
+    window.show()
+    sys.exit(app.exec_())
