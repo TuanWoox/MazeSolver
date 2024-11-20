@@ -299,20 +299,22 @@ class MazeApp(tk.Tk):
         self.canvas = tk.Canvas(self, width=self.maze.width * self.cell_size, height=self.maze.height * self.cell_size, bg="#2c3e50", highlightthickness=0)
         self.canvas.grid(row=0, column=0, columnspan=6, pady=(20, 10), padx=10)
 
-        self.status_label = tk.Label(self, text="Welcome to Maze Solver", font=("Helvetica", 12), fg="#ecf0f1", bg="#2c3e50")
+        self.status_label = tk.Label(self, text="Welcome to Maze Solver", font=("Helvetica", 14, "bold"), fg="#ecf0f1", bg="#2c3e50")
         self.status_label.grid(row=1, column=0, columnspan=6, pady=(5, 10))
 
-        # Button style
+        # Button style for a modern look
         button_style = {
-            "font": ("Helvetica", 12),
+            "font": ("Arial", 12, "bold"),
             "fg": "#2c3e50",
             "bg": "#ecf0f1",
-            "activebackground": "#bdc3c7",
+            "activebackground": "#1abc9c",  # A fresh green color for active state
             "activeforeground": "#2c3e50",
-            "width": 15,
-            "height": 1,
+            "width": 18,
+            "height": 2,
             "borderwidth": 0,
             "relief": "raised",
+            "highlightthickness": 0,
+            "cursor": "hand2",  # Makes it visually clear it's clickable
         }
 
         # Dropdown menu for solving algorithms
@@ -325,19 +327,9 @@ class MazeApp(tk.Tk):
             "Solve Hill Climbing",
             "Solve Beam Search",
         ]
-       # Dropdown menu for solving algorithms
-        self.selected_algorithm = tk.StringVar(value="Select Algorithm")
-        algorithms = [
-            "Solve BFS",
-            "Solve DFS",
-            "Solve A*",
-            "Solve Greedy",
-            "Solve Hill Climbing",
-            "Solve Beam Search",
-        ]
         self.algorithm_dropdown = tk.OptionMenu(self, self.selected_algorithm, *algorithms)
         self.algorithm_dropdown.config(
-            font=("Helvetica", 12),
+            font=("Arial", 12),
             fg="#2c3e50",
             bg="#ecf0f1",
             activebackground="#bdc3c7",
@@ -345,36 +337,40 @@ class MazeApp(tk.Tk):
             width=20,
             relief="flat",
         )
-        self.algorithm_dropdown.grid(row=2, column=0, padx=(5, 2), pady=5)  # Reduced padding to bring them closer
+        # Place the dropdown in the first column
+        self.algorithm_dropdown.grid(row=2, column=0, padx=(5, 5), pady=10)
 
         # Apply button for the selected algorithm
         self.apply_button = tk.Button(
             self,
             text="Apply",
             command=self.apply_algorithm,
-            font=("Helvetica", 12),
+            font=("Arial", 12, "bold"),
             fg="#ecf0f1",
-            bg="#2ecc71",
-            activebackground="#27ae60",
+            bg="#3498db",  # A beautiful blue for the Apply button
+            activebackground="#2980b9",
             activeforeground="#ecf0f1",
-            width=10,
-            height=1,
-            relief="flat",
+            width=15,
+            height=2,
+            relief="raised",
             borderwidth=0,
             cursor="hand2",  # Makes it visually clear it's clickable
         )
-        self.apply_button.grid(row=2, column=1, padx=(2, 5), pady=5)  # Reduced padding to make it closer
+        # Place the "Apply" button in the second column, next to the dropdown
+        self.apply_button.grid(row=2, column=1, padx=(5, 10), pady=10)
 
-
+        tk.Button(self, text="Generate Maze", command=self.generate_maze, **button_style).grid(row=2, column=3, padx=5, pady=5)
+        tk.Button(self, text="Play Mode", command=self.start_play_mode, **button_style).grid(row=2, column=4, padx=5, pady=5)
         # Save Map button
         tk.Button(self, text="Save Map", command=self.save_map, **button_style).grid(
-            row=3, column=4, padx=5, pady=5
+            row=4, column=3, padx=(5, 10), pady=10
         )
 
         # Exit to Start Screen button
         tk.Button(self, text="Exit to Start Screen", command=self.exit_to_start_screen, **button_style).grid(
-            row=3, column=5, padx=5, pady=5
+            row=4, column=4, padx=(10, 5), pady=10
         )
+        
 
 
         # Draw the initial maze layout
