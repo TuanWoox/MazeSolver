@@ -210,7 +210,76 @@ class Maze:
             return base_distance + min_distance_to_empty  # Encourage moving towards nearby empty cells
 
         return base_distance  # Fallback to the base Manhattan distance
-    
+    def hill_climb_solve(self, visualize):
+        """Hill Climbing Search."""
+        self.num_explored = 0
+        start = Node(state=self.start, parent=None, action=None)
+        self.explored = set()
+
+        current_node = start
+        while True:
+            self.num_explored += 1
+            visualize(current_node.state)
+
+            if current_node.state == self.goal:
+                return self.backtrack_solution(current_node)
+
+            self.explored.add(current_node.state)
+
+            # Get all neighbors and sort by heuristic value (ascending)
+            neighbors = [
+                Node(state=state, parent=current_node, action=action)
+                for action, state in self.neighbors(current_node.state)
+                if state not in self.explored
+            ]
+            for neighbor in neighbors:
+                neighbor.priority = self.heuristic(neighbor.state)
+
+            if not neighbors:
+                raise Exception("No solution found with Hill Climbing (stuck in local minima).")
+
+            # Choose the neighbor with the best heuristic (smallest value)
+            best_neighbor = min(neighbors, key=lambda x: x.priority)
+
+            # If no improvement, stop (local minimum reached)
+            if self.heuristic(current_node.state) <= best_neighbor.priority:
+                raise Exception("No solution found with Hill Climbing (local minima).")
+
+            current_node = best_neighbor
+    def beam_search_solve(self, visualize, beam_width=2):
+        """Beam Search."""
+        self.num_explored = 0
+        start = Node(state=self.start, parent=None, action=None)
+        self.explored = set()
+
+        frontier = [(self.heuristic(start.state), start)]  # Priority queue of (heuristic, node)
+
+        while frontier:
+            self.num_explored += len(frontier)
+
+            # Sort frontier by heuristic and keep only the best `beam_width` nodes
+            frontier.sort(key=lambda x: x[0])
+            frontier = frontier[:beam_width]
+
+            next_frontier = []
+            for _, node in frontier:
+                visualize(node.state)
+
+                if node.state == self.goal:
+                    return self.backtrack_solution(node)
+
+                self.explored.add(node.state)
+                for action, state in self.neighbors(node.state):
+                    if state not in self.explored:
+                        child = Node(state=state, parent=node, action=action)
+                        child.priority = self.heuristic(state)
+                        next_frontier.append((child.priority, child))
+
+            frontier = next_frontier
+
+        raise Exception("No solution found with Beam Search.")
+
+
 class MazeApp(tk.Tk):
     def __init__(self, maze):
         super().__init__()
@@ -246,20 +315,45 @@ class MazeApp(tk.Tk):
             "relief": "raised",
         }
 
-        # Buttons in a single row
-        tk.Button(self, text="Generate Maze", command=self.generate_maze, **button_style).grid(row=2, column=0, padx=5, pady=5)
-        tk.Button(self, text="Play Mode", command=self.start_play_mode, **button_style).grid(row=2, column=1, padx=5, pady=5)
-        tk.Button(self, text="Solve with BFS", command=self.solve_maze_bfs, **button_style).grid(row=2, column=2, padx=5, pady=5)
-        tk.Button(self, text="Solve with DFS", command=self.solve_maze_dfs, **button_style).grid(row=2, column=3, padx=5, pady=5)
-        tk.Button(self, text="Solve with A*", command=self.solve_maze_a_star, **button_style).grid(row=2, column=4, padx=5, pady=5)
-        tk.Button(self, text="Solve with Greedy", command=self.solve_maze_greedy, **button_style).grid(row=2, column=5, padx=5, pady=5)
-        
-        # Exit button in a separate row
-        tk.Button(self, text="Save Map", command=self.save_map, **button_style).grid(row=3, column=0, columnspan=3, pady=(10, 20))
-        tk.Button(self, text="Exit to Start Screen", command=self.exit_to_start_screen, **button_style).grid(row=3, column=3, columnspan=3, pady=(10, 20))
+        # Buttons in a single row for generation and solving
+        tk.Button(self, text="Generate Maze", command=self.generate_maze, **button_style).grid(
+            row=2, column=0, padx=5, pady=5
+        )
+        tk.Button(self, text="Play Mode", command=self.start_play_mode, **button_style).grid(
+            row=2, column=1, padx=5, pady=5
+        )
+        tk.Button(self, text="Solve BFS", command=self.solve_maze_bfs, **button_style).grid(
+            row=2, column=2, padx=5, pady=5
+        )
+        tk.Button(self, text="Solve DFS", command=self.solve_maze_dfs, **button_style).grid(
+            row=2, column=3, padx=5, pady=5
+        )
+        tk.Button(self, text="Solve  A*", command=self.solve_maze_a_star, **button_style).grid(
+            row=2, column=4, padx=5, pady=5
+        )
+        tk.Button(self, text="Solve Greedy", command=self.solve_maze_greedy, **button_style).grid(
+            row=2, column=5, padx=5, pady=5
+        )
+
+        # Additional solving algorithms and utility buttons in the next row
+        tk.Button(self, text="Solve Hill Climbing", command=self.solve_maze_hill_climb, **button_style).grid(
+            row=3, column=0, padx=5, pady=5
+        )
+        tk.Button(self, text="Solve Beam Search", command=self.solve_maze_beam_search, **button_style).grid(
+            row=3, column=1, padx=5, pady=5
+        )
+        tk.Button(self, text="Save Map", command=self.save_map, **button_style).grid(
+            row=3, column=4, padx=5, pady=5
+        )
+        tk.Button(self, text="Exit to Start Screen", command=self.exit_to_start_screen, **button_style).grid(
+            row=3, column=5, padx=5, pady=5
+        )
+
+
 
         # Draw the initial maze layout
         self.draw_maze()
+    
     def center_window(self, width, height):
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
@@ -274,21 +368,26 @@ class MazeApp(tk.Tk):
         self.status_label.config(text="New maze generated!")
 
     def draw_maze(self):
-        self.canvas.delete("all")
+        """
+        Draw the maze on the canvas with walls, empty spaces, start, and goal.
+        """
         for row in range(self.maze.height):
             for col in range(self.maze.width):
-                x1, y1 = col * self.cell_size, row * self.cell_size
-                x2, y2 = x1 + self.cell_size, y1 + self.cell_size
-                color = "black" if self.maze.walls[row][col] else "white"
-                self.canvas.create_rectangle(x1, y1, x2, y2, fill=color, outline=color)
+                x1 = col * self.cell_size
+                y1 = row * self.cell_size
+                x2 = x1 + self.cell_size
+                y2 = y1 + self.cell_size
 
-        # Start and goal positions
-        start_x, start_y = self.maze.start
-        goal_x, goal_y = self.maze.goal
-        self.canvas.create_oval(start_x * self.cell_size, start_y * self.cell_size,
-                                (start_x + 1) * self.cell_size, (start_y + 1) * self.cell_size, fill="green")
-        self.canvas.create_oval(goal_x * self.cell_size, goal_y * self.cell_size,
-                                (goal_x + 1) * self.cell_size, (goal_y + 1) * self.cell_size, fill="red")
+                # Check what to draw
+                if self.maze.walls[row][col]:  # Wall
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="black", outline="white")
+                elif (row, col) == self.maze.start:  # Start (A)
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="red", outline="white")
+                elif (row, col) == self.maze.goal:  # Goal (B)
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="green", outline="white")
+                else:  # Empty space
+                    self.canvas.create_rectangle(x1, y1, x2, y2, fill="white", outline="white")
+        
 
     def visualize(self, state):
         row, col = state
@@ -308,13 +407,37 @@ class MazeApp(tk.Tk):
             self.after(10)
 
     def clear_cells(self):
+        """
+        Clears all non-wall cells and redraws the start (red) and goal (green) cells.
+        """
         for row in range(self.maze.height):
             for col in range(self.maze.width):
                 if not self.maze.walls[row][col]:
                     x1, y1 = col * self.cell_size, row * self.cell_size
                     x2, y2 = x1 + self.cell_size, y1 + self.cell_size
                     self.canvas.create_rectangle(x1, y1, x2, y2, fill="white", outline="white")
+
+        # Redraw the start (red) and goal (green) cells
+        self.draw_special_cells()
+
         self.update()
+
+    def draw_special_cells(self):
+        """
+        Redraws the start and goal cells with their respective colors.
+        """
+        start_row, start_col = self.maze.start
+        goal_row, goal_col = self.maze.goal
+
+        # Draw start cell (red)
+        x1, y1 = start_col * self.cell_size, start_row * self.cell_size
+        x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="red", outline="white")
+
+        # Draw goal cell (green)
+        x1, y1 = goal_col * self.cell_size, goal_row * self.cell_size
+        x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+        self.canvas.create_rectangle(x1, y1, x2, y2, fill="green", outline="white")
 
     def solve_maze_bfs(self):
         self.clear_cells()
@@ -331,6 +454,13 @@ class MazeApp(tk.Tk):
     def solve_maze_greedy(self):
         self.clear_cells()
         self.solve_maze(self.maze.greedy_solve, "Greedy")
+    def solve_maze_hill_climb(self):
+        self.clear_cells()
+        self.solve_maze(self.maze.hill_climb_solve, "Hill Climbing")
+
+    def solve_maze_beam_search(self):
+        self.clear_cells()
+        self.solve_maze(lambda visualize: self.maze.beam_search_solve(visualize, beam_width=2), "Beam Search")
 
     def solve_maze(self, solve_method, method_name):
         self.status_label.config(text=f"Solving with {method_name}...")
@@ -388,8 +518,87 @@ class MazeApp(tk.Tk):
 
 
     def start_play_mode(self):
-        # Implement play mode logic if needed
-        pass
+        """Activate play mode and allow user to navigate the maze."""
+        self.clear_cells()  # Clear maze and reset
+
+        # Set play mode to active
+        self.play_mode_active = True
+
+        # Set the player's starting position to the start of the maze
+        self.player_position = self.maze.start
+
+        # Reset steps taken
+        self.steps_taken = 0  # Reset step counter
+
+        # Display a status message to the user
+        self.status_label.config(text=f"Play Mode: Use arrow keys to navigate! Steps: {self.steps_taken}")
+
+        # Bind arrow keys for movement
+        self.bind("<Up>", self.move_up)
+        self.bind("<Down>", self.move_down)
+        self.bind("<Left>", self.move_left)
+        self.bind("<Right>", self.move_right)
+
+        # Update the maze display to highlight the player's starting position
+        self.update_player_position()
+
+    def move_up(self, event=None):
+        """Move player up."""
+        self.move_player((-1, 0))
+
+    def move_down(self, event=None):
+        """Move player down."""
+        self.move_player((1, 0))
+
+    def move_left(self, event=None):
+        """Move player left."""
+        self.move_player((0, -1))
+
+    def move_right(self, event=None):
+        """Move player right."""
+        self.move_player((0, 1))
+
+    def move_player(self, direction):
+        """Move the player in the specified direction."""
+        if not self.play_mode_active:
+            return
+
+        row, col = self.player_position
+        d_row, d_col = direction
+        new_position = (row + d_row, col + d_col)
+
+        # Check if the new position is within bounds and not a wall
+        if (
+            0 <= new_position[0] < self.maze.height
+            and 0 <= new_position[1] < self.maze.width
+            and not self.maze.walls[new_position[0]][new_position[1]]
+        ):
+            self.player_position = new_position
+            self.update_player_position()
+
+            # Increment step count and update status label
+            self.steps_taken += 1
+            self.status_label.config(text=f"Play Mode: Use arrow keys to navigate! Steps: {self.steps_taken}")
+
+            # Check if player reached the goal
+            if new_position == self.maze.goal:
+                self.status_label.config(text=f"Congratulations! You reached the goal! Total Steps: {self.steps_taken}")
+                self.play_mode_active = False
+                self.unbind("<Up>")
+                self.unbind("<Down>")
+                self.unbind("<Left>")
+                self.unbind("<Right>")
+
+    def update_player_position(self):
+        """Update the player's position on the canvas."""
+        self.canvas.delete("player")
+        row, col = self.player_position
+        x1, y1 = col * self.cell_size, row * self.cell_size
+        x2, y2 = x1 + self.cell_size, y1 + self.cell_size
+        self.canvas.create_oval(x1, y1, x2, y2, fill="green", tag="player")
+
+
+
 
     def exit_to_start_screen(self):
         self.destroy()
