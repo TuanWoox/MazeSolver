@@ -10,11 +10,20 @@ class DrawCustomMap:
 
         # Set canvas size based on 27x14 grid and grid size (20px per cell)
         canvas_width, canvas_height = 55 * 20, 27 * 20
+        self.grid_size = 20  # 20px per grid cell
+
+        # Center the draw window
+        screen_width = self.draw_window.winfo_screenwidth()
+        screen_height = self.draw_window.winfo_screenheight()
+        x = (screen_width - canvas_width) // 2
+        y = (screen_height - canvas_height) // 2
+        self.draw_window.geometry(f"{canvas_width}x{canvas_height+100}+{x}+{y}")
+
+        # Create the canvas for drawing
         self.canvas = tk.Canvas(self.draw_window, width=canvas_width, height=canvas_height, bg="#ecf0f1")
         self.canvas.pack()
 
         # Grid properties
-        self.grid_size = 20  # 20px per grid cell
         self.grid = {}
 
         # Draw grid on the canvas for a 27x14 maze
@@ -25,15 +34,18 @@ class DrawCustomMap:
 
         # Buttons to mark start and goal
         self.current_marker = None
-        start_button = tk.Button(self.draw_window, text="Set Start", command=self.set_start)
-        start_button.pack(pady=5)
+        button_frame = tk.Frame(self.draw_window)
+        button_frame.pack(pady=5)
 
-        goal_button = tk.Button(self.draw_window, text="Set Goal", command=self.set_goal)
-        goal_button.pack(pady=5)
+        start_button = tk.Button(button_frame, text="Set Start", command=self.set_start)
+        start_button.pack(side=tk.LEFT, padx=5)
+
+        goal_button = tk.Button(button_frame, text="Set Goal", command=self.set_goal)
+        goal_button.pack(side=tk.LEFT, padx=5)
 
         # Save button
-        save_button = tk.Button(self.draw_window, text="Save Map", command=self.save_custom_map)
-        save_button.pack(pady=10)
+        save_button = tk.Button(button_frame, text="Save Map", command=self.save_custom_map)
+        save_button.pack(side=tk.LEFT, padx=5)
 
         # Bind mouse click event to toggle wall, space, start, and goal
         self.canvas.bind("<Button-1>", self.toggle_cell)
