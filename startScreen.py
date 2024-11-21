@@ -19,6 +19,7 @@ import visualizeState
 from drawCustomMap import DrawCustomMap
 
 
+
 class MazeSolverApp(QMainWindow):
     def __init__(self, bg_image_path):
         super().__init__()
@@ -100,15 +101,17 @@ class MazeSolverApp(QMainWindow):
             }
             """
         )
-        button.setFixedSize(300, 60)
+        button.setFixedSize(600, 60)
         button.clicked.connect(command)
         self.overlay_layout.addWidget(button)
 
     def play_with_random_map(self):
+        self.close()  # Close the current window
         maze_file = "maze.txt"  # Example random maze file
         if os.path.exists(maze_file):
             maze = visualizeState.Maze(maze_file)
-            visualizeState.MazeApp(maze).mainloop()
+            self.maze_app = visualizeState.MazeApp(maze)  # Instantiate the new MazeApp
+            self.maze_app.show()  # Use show() to display the PyQt5 application
         else:
             QMessageBox.critical(self, "Error", "Random maze file not found!")
 
@@ -119,7 +122,6 @@ class MazeSolverApp(QMainWindow):
         else:
             self.custom_map_window = DrawCustomMap()
             self.custom_map_window.show()
-
 
     def open_map_selector(self):
         save_dir = "./save"
@@ -134,9 +136,11 @@ class MazeSolverApp(QMainWindow):
     def load_selected_map(self, file_path):
         if os.path.exists(file_path):
             maze = visualizeState.Maze(file_path)
-            visualizeState.MazeApp(maze).mainloop()
+            self.maze_app = visualizeState.MazeApp(maze)  # Instantiate the new MazeApp
+            self.maze_app.show()  # Use show() instead of mainloop()
         else:
             QMessageBox.critical(self, "Error", "Map file not found!")
+
 
 
 if __name__ == "__main__":

@@ -1,14 +1,6 @@
-import sys
-import re
-import tkinter as tk
-from tkinter import simpledialog
+
 from queue import Queue
 import heapq
-import subprocess
-import os
-import startScreen
-
-bg_image_path = "background.jpg"
 
 class Node:
     def __init__(self, state, parent=None, action=None, cost=0, priority=0):
