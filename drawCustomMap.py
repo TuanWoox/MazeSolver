@@ -39,11 +39,13 @@ class DrawCustomMap(QMainWindow):
         self.add_button("Set Start", lambda: self.canvas.set_mode("start"), 0, 2)
         self.add_button("Set Goal", lambda: self.canvas.set_mode("goal"), 0, 3)
         self.add_button("Clear Map", self.canvas.clear_map, 0, 4)
-        self.add_button("Save Map", self.canvas.save_map, 1, 0)
+        self.add_button("Save Map", self.canvas.save_map, 1, 0, object_name="save_map_button")
         self.add_button("Exit", self.close, 1, 4)   
 
-    def add_button(self, text, command, row, col):
+    def add_button(self, text, command, row, col,object_name=None):
         button = QPushButton(text)
+        if object_name:
+            button.setObjectName(object_name)  # Assign the object name
         button.setStyleSheet(
             """
             QPushButton {

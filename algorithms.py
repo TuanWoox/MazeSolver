@@ -24,7 +24,7 @@ class Maze:
         contents = contents.splitlines()
         self.height = len(contents)
         self.width = max(len(line) for line in contents)
-
+        self.filename = filename;
         self.walls = []
         for i in range(self.height):
             row = []

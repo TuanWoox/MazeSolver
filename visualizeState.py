@@ -10,8 +10,8 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QBrush, QPen
 from MapSelectorDialog import MapSelectorDialog  # Import the separate class
 from algorithms import Maze  # Assuming Maze class is implemented separately
-
-
+from editMap import EditMaze
+from report_window import ReportWindow  # Import the ReportWindow class
 class MazeApp(QMainWindow):
     def __init__(self, maze):
         super().__init__()
@@ -49,27 +49,10 @@ class MazeApp(QMainWindow):
         self.main_layout.addWidget(self.status_label)
 
         # Control Buttons and Dropdown
-        controls_layout = QHBoxLayout()
-        self.main_layout.addLayout(controls_layout)
+        self.controls_layout = QHBoxLayout()  # Make this an instance attribute
+        self.main_layout.addLayout(self.controls_layout)
 
-        # Add Buttons and Dropdown
-        self.algorithm_dropdown = QComboBox()
-        self.algorithm_dropdown.addItems([
-            "Select Algorithm", "Solve BFS", "Solve DFS",
-            "Solve A*", "Solve Greedy", "Solve Hill Climbing", "Solve Beam Search"
-        ])
-        self.algorithm_dropdown.setStyleSheet("font-size: 14px; padding: 5px;")
-        controls_layout.addWidget(self.algorithm_dropdown)
-
-        # Add Apply, Generate, Save, Play, Exit, Load Map, Edit, Analyze Buttons
-        self.add_button(controls_layout, "Apply Algorithm", self.apply_algorithm)
-        self.add_button(controls_layout, "Generate Maze", self.generate_maze)
-        self.add_button(controls_layout, "Save Map", self.save_map)
-        self.add_button(controls_layout, "Play Mode", self.start_play_mode)
-        self.add_button(controls_layout, "Exit", self.close)
-        self.add_button(controls_layout, "Load Map", self.load_map)
-        self.add_button(controls_layout, "Edit", self.edit_maze)
-        self.add_button(controls_layout, "Analyze", self.analyze_algorithms)
+        self.setup_original_buttons();
 
     def add_button(self, layout, text, function):
         """Helper function to add buttons to a layout."""
@@ -275,27 +258,68 @@ class MazeApp(QMainWindow):
             self.status_label.setText("Map loading canceled.")
 
     def edit_maze(self):
-        """Placeholder for editing a maze."""
-        self.status_label.setText("Edit maze functionality coming soon!")
+        print(self.maze);
+        """Open the EditMaze window for editing."""
+        if not os.path.exists(self.maze.filename):
+            QMessageBox.critical(self, "Error", f"Map file '{self.maze}' not found!")
+            return
+        
+        # Function to reload the map
+        def reload_map():
+            self.maze = Maze(self.maze.filename) 
+            self.draw_maze()  
+
+        self.edit_window = EditMaze(self.maze.filename, reload_map)
+        self.edit_window.show()
+
+
+    def setup_original_buttons(self):
+        self.algorithm_dropdown = QComboBox()
+        self.algorithm_dropdown.addItems([
+            "Select Algorithm", "Solve BFS", "Solve DFS",
+            "Solve A*", "Solve Greedy", "Solve Hill Climbing", "Solve Beam Search"
+        ])
+        self.algorithm_dropdown.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.controls_layout.addWidget(self.algorithm_dropdown)
+        """Restores the original control buttons."""
+        self.add_button(self.controls_layout, "Apply Algorithm", self.apply_algorithm)
+        self.add_button(self.controls_layout, "Generate Maze", self.generate_maze)
+        self.add_button(self.controls_layout, "Save Map", self.save_map)
+        self.add_button(self.controls_layout, "Play Mode", self.start_play_mode)
+        self.add_button(self.controls_layout, "Load Map", self.load_map)
+        self.add_button(self.controls_layout, "Edit", self.edit_maze)
+        self.add_button(self.controls_layout, "Analyze", self.analyze_algorithms)
+        self.add_button(self.controls_layout, "Exit", self.close)
+
+    from report_window import ReportWindow  # Import the ReportWindow class
 
     def analyze_algorithms(self):
         """Compares all algorithms."""
         self.status_label.setText("Analyzing algorithms...")
+        QApplication.processEvents()
+
         results = []
         for method, name in [
             (self.maze.bfs_solve, "BFS"),
             (self.maze.dfs_solve, "DFS"),
             (self.maze.a_star_solve, "A*"),
+            (self.maze.greedy_solve, "Greedy"),
+            (self.maze.hill_climb_solve, "Hill Climbing"),
+            (self.maze.beam_search_solve, "Beam Search"),
         ]:
             try:
-                path = method(lambda x: None)  # Run without visualization
-                results.append((name, len(path), self.maze.num_explored))
+                # Solve without visualization
+                path = method(lambda x: None)
+                results.append((name, len(path) if path else "N/A", self.maze.num_explored))
             except Exception as e:
                 results.append((name, "Error", str(e)))
 
-        summary = "\n".join(f"{name}: Path Length={p}, States Explored={s}" for name, p, s in results)
-        self.status_label.setText("Analysis complete! Check console for details.")
-        print("Algorithm Analysis Results:\n", summary)
+        self.status_label.setText("Analysis complete! Opening report...")
+        QApplication.processEvents()
+
+        # Open the Report Window
+        self.report_window = ReportWindow(results, self)
+        self.report_window.exec_()
     def generate_maze(self):
         # Call randomMaze.py to generate a new maze
         subprocess.run(["python", "randomMaze.py"])
