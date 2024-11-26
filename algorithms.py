@@ -46,7 +46,9 @@ class Maze:
 
         self.solution = None
         self.num_explored = 0
-
+    def reset_state(self):
+        """Resets maze state for a new solving attempt."""
+        self.num_explored = 0
     def neighbors(self, state):
         row, col = state
         candidates = [

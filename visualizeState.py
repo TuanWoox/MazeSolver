@@ -292,34 +292,55 @@ class MazeApp(QMainWindow):
         self.add_button(self.controls_layout, "Exit", self.close)
 
     from report_window import ReportWindow  # Import the ReportWindow class
-
+    
     def analyze_algorithms(self):
-        """Compares all algorithms."""
+        """Compares all algorithms and generates a detailed report."""
         self.status_label.setText("Analyzing algorithms...")
         QApplication.processEvents()
 
+        # List to store results
         results = []
-        for method, name in [
+
+        # Define algorithms to test
+        algorithms = [
             (self.maze.bfs_solve, "BFS"),
             (self.maze.dfs_solve, "DFS"),
             (self.maze.a_star_solve, "A*"),
             (self.maze.greedy_solve, "Greedy"),
             (self.maze.hill_climb_solve, "Hill Climbing"),
             (self.maze.beam_search_solve, "Beam Search"),
-        ]:
+        ]
+
+        # Analyze each algorithm
+        for solve_method, name in algorithms:
             try:
-                # Solve without visualization
-                path = method(lambda x: None)
-                results.append((name, len(path) if path else "N/A", self.maze.num_explored))
+                # Reset the maze state before solving
+                self.maze.reset_state()
+
+                # Solve the maze without visualization
+                path = solve_method(lambda x: None)
+
+                # Calculate path length and states explored
+                steps_to_goal = len(path) if path else "N/A"
+                num_explored = self.maze.num_explored
+
+                # Append results
+                results.append((name, steps_to_goal, num_explored))
+            
             except Exception as e:
+                # Append error details to results
                 results.append((name, "Error", str(e)))
 
+        # Update status label for analysis completion
         self.status_label.setText("Analysis complete! Opening report...")
         QApplication.processEvents()
 
         # Open the Report Window
         self.report_window = ReportWindow(results, self)
         self.report_window.exec_()
+
+
+
     def generate_maze(self):
         # Call randomMaze.py to generate a new maze
         subprocess.run(["python", "randomMaze.py"])

@@ -36,33 +36,53 @@ class ReportWindow(QDialog):
     def plot_chart(self):
         # Extract algorithm names, path lengths, and states explored from results
         algorithms = [result[0] for result in self.results]
-        path_lengths = [result[1] if isinstance(result[1], int) else 0 for result in self.results]  # Handle non-integer values
-        states_explored = [result[2] if isinstance(result[2], int) else 0 for result in self.results]  # Handle non-integer values
+        path_lengths = [
+            result[1] if isinstance(result[1], (int, float)) else 0 for result in self.results
+        ]  # Default to 0 for invalid values
+        states_explored = [
+            result[2] if isinstance(result[2], (int, float)) else 0 for result in self.results
+        ]  # Default to 0 for invalid values
 
+        # Clear the figure for a clean plot
+        self.figure.clear()
+
+        # Create the bar chart
         ax = self.figure.add_subplot(111)
         bar_width = 0.35
         index = range(len(algorithms))
 
         # Create bars for Path Length and States Explored
-        bar1 = ax.bar(index, path_lengths, bar_width, label='Path Lengths', color='blue')
-        bar2 = ax.bar([p + bar_width for p in index], states_explored, bar_width, label='States Explored', color='orange')
+        bar1 = ax.bar(index, path_lengths, bar_width, label="Path Lengths", color="blue")
+        bar2 = ax.bar(
+            [p + bar_width for p in index],
+            states_explored,
+            bar_width,
+            label="States Explored",
+            color="orange",
+        )
 
-        # Add value annotations on top of the bars, with increased distance
+        # Add value annotations on top of the bars
         for i, v in enumerate(path_lengths):
-            ax.text(i - 0.1, v + 1, str(v), color='blue', ha='center', va='bottom', fontsize=12)
+            if v != 0:  # Avoid displaying for 0 values
+                ax.text(i, v + 0.5, str(v), color="blue", ha="center", fontsize=10)
 
         for i, v in enumerate(states_explored):
-            ax.text(i + bar_width - 0.1, v + 1, str(v), color='orange', ha='center', va='bottom', fontsize=12)
+            if v != 0:  # Avoid displaying for 0 values
+                ax.text(i + bar_width, v + 0.5, str(v), color="orange", ha="center", fontsize=10)
 
         # Set labels and title
-        ax.set_xlabel('Algorithms')
-        ax.set_ylabel('Values')
-        ax.set_title('Comparison of Algorithms (Path Length vs States Explored)')
+        ax.set_xlabel("Algorithms")
+        ax.set_ylabel("Values")
+        ax.set_title("Comparison of Algorithms (Path Length vs States Explored)")
 
+        # Set x-ticks and labels
         ax.set_xticks([p + bar_width / 2 for p in index])
         ax.set_xticklabels(algorithms)
 
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=12)  # Move legend out of plot area
-
-        # Adjust layout to prevent overlap
+        # Add legend and improve layout
+        ax.legend(loc="best")
         self.figure.tight_layout(pad=2.0)
+
+        # Redraw the canvas
+        self.canvas.draw()
+
