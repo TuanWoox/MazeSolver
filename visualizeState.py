@@ -4,7 +4,7 @@ import os
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget,
     QLabel, QPushButton, QComboBox, QDialog, QGraphicsScene, 
-    QGraphicsView, QGraphicsRectItem, QLineEdit, QMessageBox, QListWidget, QVBoxLayout
+    QGraphicsView, QGraphicsRectItem, QLineEdit, QMessageBox, QListWidget, QVBoxLayout,QGraphicsEllipseItem
 )
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QBrush, QPen
@@ -23,6 +23,8 @@ class MazeApp(QMainWindow):
 
         self.init_ui()
         self.draw_maze()
+        self.player_position = self.maze.start  # Initialize player's position at start
+        self.step_count = 0  # Initialize step count to 0
 
     def init_ui(self):
         # Main widget and layout
@@ -383,11 +385,102 @@ class MazeApp(QMainWindow):
         except Exception as e:
             self.status_label.setText(f"Error saving map: {str(e)}")
 
-
     def start_play_mode(self):
         """Activates play mode for manual navigation."""
         self.status_label.setText("Play Mode: Navigate using arrow keys!")
-        # Bind arrow key events to movement functions (to be implemented)
+        
+        # Initial player position at the start point
+        self.player_position = self.maze.start
+        self.step_count = 0  # Reset step counter
+        self.draw_maze()  # Draw the maze
+        self.draw_player()  # Draw the player in the start position
+
+        # Set key event handling for play mode
+        self.view.setFocus()  # Focus on the view to capture key events
+        self.view.keyPressEvent = self.handle_key_event
+
+    def handle_key_event(self, event):
+        """Handles key events for manual movement of the player in play mode."""
+        if event.key() == Qt.Key_Up:
+            self.move_player(-1, 0)  # Move up (row - 1)
+        elif event.key() == Qt.Key_Down:
+            self.move_player(1, 0)  # Move down (row + 1)
+        elif event.key() == Qt.Key_Left:
+            self.move_player(0, -1)  # Move left (col - 1)
+        elif event.key() == Qt.Key_Right:
+            self.move_player(0, 1)  # Move right (col + 1)
+
+    def move_player(self, row_offset, col_offset):
+        """Moves the player within the maze, updates the step count, and redraws the maze."""
+        new_row = self.player_position[0] + row_offset
+        new_col = self.player_position[1] + col_offset
+        
+        # Ensure the player doesn't move out of bounds or into a wall
+        if 0 <= new_row < self.maze.height and 0 <= new_col < self.maze.width:
+            if not self.maze.walls[new_row][new_col]:  # Check if it's not a wall
+                self.player_position = (new_row, new_col)
+                self.step_count += 1  # Increment step count
+                self.draw_maze()  # Redraw the maze
+                self.draw_player()  # Redraw the player at the new position
+
+                # Check if the player has reached the goal
+                if self.player_position == self.maze.goal:
+                    self.status_label.setText(f"Goal reached! Steps: {self.step_count}")
+                    self.show_goal_reached_message()  # Show message and reset the game
+
+    def draw_player(self):
+        """Draws the player at the current position."""
+        # Get the current player position
+        row, col = self.player_position
+        x = col * self.cell_size
+        y = row * self.cell_size
+
+        # Draw the player (e.g., as a blue circle)
+        player_radius = self.cell_size // 3
+        player_item = QGraphicsEllipseItem(x + self.cell_size // 2 - player_radius, 
+                                        y + self.cell_size // 2 - player_radius, 
+                                        player_radius * 2, player_radius * 2)
+        player_item.setBrush(QBrush(QColor("#2980b9")))  # Blue for player
+        player_item.setPen(QPen(Qt.NoPen))
+        
+        # Remove any previous player drawing
+        self.clear_player()
+
+        # Add the new player item to the scene
+        self.scene.addItem(player_item)
+
+    def clear_player(self):
+        """Clears any previous player drawings from the scene."""
+        for item in self.scene.items():
+            if isinstance(item, QGraphicsEllipseItem):  # Check if item is a player
+                self.scene.removeItem(item)
+
+    def show_goal_reached_message(self):
+        """Shows a message and resets the player to the start position."""
+        # Show a dialog with congratulations and step count
+        self.show_congratulations_dialog()
+
+        # Wait a bit before resetting the game
+        QTimer.singleShot(1000, self.reset_to_start)  # Reset after 1 second
+
+    def show_congratulations_dialog(self):
+        """Displays a dialog with the congratulations message and step count."""
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setWindowTitle("Congratulations!")
+        msg.setText("Congratulations! You've reached the goal.")
+        msg.setInformativeText(f"You took {self.step_count} steps to complete the maze.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+
+    def reset_to_start(self):
+        """Resets the player to the start position after reaching the goal."""
+        self.status_label.setText("Play Mode: Navigate using arrow keys!")
+        self.player_position = self.maze.start  # Reset to start
+        self.step_count = 0  # Reset the step counter
+        self.draw_maze()  # Redraw the maze
+        self.draw_player()  # Redraw the player at the start position
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
