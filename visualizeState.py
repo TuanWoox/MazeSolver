@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsRectItem, QLineEdit, QMessageBox, QListWidget, QVBoxLayout
 )
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QColor, QBrush, QPen
+from PyQt5.QtGui import QColor, QBrush, QPen, QCursor
 from MapSelectorDialog import MapSelectorDialog  # Import the separate class
 from algorithms import Maze  # Assuming Maze class is implemented separately
 
@@ -66,18 +66,43 @@ class MazeApp(QMainWindow):
         self.add_button(controls_layout, "Generate Maze", self.generate_maze)
         self.add_button(controls_layout, "Save Map", self.save_map)
         self.add_button(controls_layout, "Play Mode", self.start_play_mode)
-        self.add_button(controls_layout, "Exit", self.close)
         self.add_button(controls_layout, "Load Map", self.load_map)
         self.add_button(controls_layout, "Edit", self.edit_maze)
         self.add_button(controls_layout, "Analyze", self.analyze_algorithms)
+        self.add_button(controls_layout, "Exit", self.close)
 
     def add_button(self, layout, text, function):
         """Helper function to add buttons to a layout."""
+        if text == "Exit":
+            button = QPushButton(text)
+            button.setCursor(QCursor(Qt.PointingHandCursor))  # Set pointer cursor
+            button.setStyleSheet(self.button_exit())
+            button.clicked.connect(function)
+            layout.addWidget(button)
+            return
         button = QPushButton(text)
+        button.setCursor(QCursor(Qt.PointingHandCursor))  # Set pointer cursor
         button.setStyleSheet(self.button_style())
         button.clicked.connect(function)
         layout.addWidget(button)
-
+    def button_exit(self):
+        """Returns a shared button style with hover effects."""
+        return """
+            QPushButton {
+                font-size: 14px;
+                color: #ffffff;
+                background-color: #d9526e;
+                border: none;
+                padding: 10px 15px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #AE445A;  /* Darker blue */
+            }
+            QPushButton:pressed {
+                background-color: #d95252;  /* Even darker blue */
+            }
+        """
     def button_style(self):
         """Returns a shared button style with hover effects."""
         return """

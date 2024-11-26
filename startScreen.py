@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QDialog,
 )
-from PyQt5.QtGui import QPixmap, QMovie
+from PyQt5.QtGui import QPixmap, QMovie, QCursor
 from PyQt5.QtCore import Qt
 
 from MapSelectorDialog import MapSelectorDialog  # Import the separate class
@@ -83,6 +83,7 @@ class MazeSolverApp(QMainWindow):
 
     def add_button(self, text, command):
         button = QPushButton(text, self.overlay_widget)
+        button.setCursor(QCursor(Qt.PointingHandCursor))  # Set pointer cursor
         button.setStyleSheet(
             """
             QPushButton {
@@ -106,7 +107,6 @@ class MazeSolverApp(QMainWindow):
         self.overlay_layout.addWidget(button)
 
     def play_with_random_map(self):
-        self.close()  # Close the current window
         maze_file = "maze.txt"  # Example random maze file
         if os.path.exists(maze_file):
             maze = visualizeState.Maze(maze_file)
