@@ -165,7 +165,7 @@ class MazeApp(QMainWindow):
     def add_icon(self, x, y, icon_path):
         """Helper function to add icons (prince or princess) to the maze."""
         icon_pixmap = QPixmap(icon_path).scaled(
-            self.cell_size * 0.8, self.cell_size * 0.8, Qt.IgnoreAspectRatio
+            int(self.cell_size * 0.8), int(self.cell_size * 0.8), Qt.IgnoreAspectRatio
         )
         if not icon_pixmap.isNull():
             icon_item = QGraphicsPixmapItem(icon_pixmap)
@@ -270,7 +270,7 @@ class MazeApp(QMainWindow):
 
         # Draw prince icon at start
         prince_pixmap = QPixmap("prince.png").scaled(
-            self.cell_size * 0.8, self.cell_size * 0.8, Qt.KeepAspectRatio
+            int(self.cell_size * 0.8), int(self.cell_size * 0.8), Qt.KeepAspectRatio
         )
         prince_item = QGraphicsPixmapItem(prince_pixmap)
         prince_item.setPos(x_start + self.cell_size * 0.1, y_start + self.cell_size * 0.1)
@@ -281,7 +281,7 @@ class MazeApp(QMainWindow):
         x_goal = goal_col * self.cell_size
         y_goal = goal_row * self.cell_size
         princess_pixmap = QPixmap("princess.png").scaled(
-            self.cell_size * 0.8, self.cell_size * 0.8, Qt.KeepAspectRatio
+            int(self.cell_size * 0.8), int(self.cell_size * 0.8), Qt.KeepAspectRatio
         )
         princess_item = QGraphicsPixmapItem(princess_pixmap)
         princess_item.setPos(x_goal + self.cell_size * 0.1, y_goal + self.cell_size * 0.1)

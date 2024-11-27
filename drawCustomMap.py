@@ -81,10 +81,25 @@ class CustomCanvas(QWidget):
         self.dragging = False
         self.setMouseTracking(True)
 
+        # Initialize border cells
+        self.create_border()
+
         # Initialize resize timer
         self.resize_timer = QTimer()
         self.resize_timer.setSingleShot(True)
         self.resize_timer.timeout.connect(self.resize_grid)  # Connect to resize grid method
+
+    def create_border(self):
+        """Create a border around the grid that cannot be modified."""
+        # Set first and last row to walls
+        for col in range(self.cols):
+            self.cell_states[0][col] = '#'
+            self.cell_states[self.rows - 1][col] = '#'
+        
+        # Set first and last column to walls
+        for row in range(self.rows):
+            self.cell_states[row][0] = '#'
+            self.cell_states[row][self.cols - 1] = '#'
 
     def set_mode(self, mode):
         """Set the current mode for interaction."""
@@ -105,6 +120,10 @@ class CustomCanvas(QWidget):
         """Handle cell updates based on the current mode."""
         col, row = x // self.grid_size, y // self.grid_size
         if 0 <= col < self.cols and 0 <= row < self.rows:
+            # Prevent modification of border cells
+            if row == 0 or row == self.rows - 1 or col == 0 or col == self.cols - 1:
+                return
+
             if self.current_mode == "start":  # Set Start
                 if self.start_pos:
                     old_col, old_row = self.start_pos
@@ -155,7 +174,9 @@ class CustomCanvas(QWidget):
         self.current_marker = 'B'
 
     def clear_map(self):
+        """Clear the map but keep the border intact."""
         self.cell_states = [[' ' for _ in range(self.cols)] for _ in range(self.rows)]
+        self.create_border()  # Recreate the border
         self.start_pos = None
         self.goal_pos = None
         self.update()
@@ -175,6 +196,7 @@ class CustomCanvas(QWidget):
             QMessageBox.information(self, "Success", f"Your custom map has been saved to {file_path}!")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save the map: {str(e)}")
+
 
 
 

@@ -31,11 +31,14 @@ class EditMaze(DrawCustomMap):
         with open(self.map_path, "r") as file:
             lines = file.readlines()
 
-        # Ensure the map fits into the grid size
+        # Adjust rows and columns based on the map
         self.canvas.rows = len(lines)
         self.canvas.cols = max(len(line.strip()) for line in lines)
+
+        # Reset the cell states to match the loaded map
         self.canvas.cell_states = [[' ' for _ in range(self.canvas.cols)] for _ in range(self.canvas.rows)]
 
+        # Populate the canvas with the map data
         for row_idx, line in enumerate(lines):
             for col_idx, char in enumerate(line.strip()):
                 if char == 'A':
@@ -43,7 +46,11 @@ class EditMaze(DrawCustomMap):
                 elif char == 'B':
                     self.canvas.goal_pos = (col_idx, row_idx)
                 self.canvas.cell_states[row_idx][col_idx] = char
+
+        # Recalculate grid sizes and redraw
+        self.canvas.resize_grid()
         self.canvas.update()
+
 
     def save_map(self):
         if self.canvas.start_pos is None or self.canvas.goal_pos is None:
