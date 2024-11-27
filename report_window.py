@@ -21,7 +21,7 @@ class ReportWindow(QDialog):
         layout.addWidget(title_label)
 
         # Create Matplotlib figure and canvas for the chart
-        self.figure = plt.Figure(figsize=(10, 7), dpi=100)  # Increase the width and height
+        self.figure = plt.Figure(figsize=(12, 7), dpi=100)  # Increased figure width for better spacing
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
 
@@ -34,55 +34,72 @@ class ReportWindow(QDialog):
         layout.addWidget(close_button)
 
     def plot_chart(self):
-        # Extract algorithm names, path lengths, and states explored from results
-        algorithms = [result[0] for result in self.results]
+        # Extract algorithm names, path lengths, states explored, and time taken from results
+        algorithms = [result["Name"] for result in self.results]
         path_lengths = [
-            result[1] if isinstance(result[1], (int, float)) else 0 for result in self.results
-        ]  # Default to 0 for invalid values
+            result["Path_Steps_Counts"] if isinstance(result["Path_Steps_Counts"], (int, float)) else 0
+            for result in self.results
+        ]
         states_explored = [
-            result[2] if isinstance(result[2], (int, float)) else 0 for result in self.results
-        ]  # Default to 0 for invalid values
+            result["Explore_States"] if isinstance(result["Explore_States"], (int, float)) else 0
+            for result in self.results
+        ]
+        times_taken = [
+            result["Time_Taken"] if isinstance(result["Time_Taken"], (int, float)) else 0
+            for result in self.results
+        ]
 
         # Clear the figure for a clean plot
         self.figure.clear()
 
         # Create the bar chart
         ax = self.figure.add_subplot(111)
-        bar_width = 0.35
+        bar_width = 0.25  # Bar width for better spacing between bars
         index = range(len(algorithms))
 
-        # Create bars for Path Length and States Explored
-        bar1 = ax.bar(index, path_lengths, bar_width, label="Path Lengths", color="blue")
+        # Create bars for Path Length, States Explored, and Time Taken
+        bar1 = ax.bar(index, path_lengths, bar_width, label="Path Lengths", color="royalblue")
         bar2 = ax.bar(
             [p + bar_width for p in index],
             states_explored,
             bar_width,
             label="States Explored",
-            color="orange",
+            color="darkorange",
+        )
+        bar3 = ax.bar(
+            [p + 2 * bar_width for p in index],
+            times_taken,
+            bar_width,
+            label="Time Taken (s)",
+            color="seagreen",
         )
 
         # Add value annotations on top of the bars
         for i, v in enumerate(path_lengths):
-            if v != 0:  # Avoid displaying for 0 values
-                ax.text(i, v + 0.5, str(v), color="blue", ha="center", fontsize=10)
+            if v != 0:
+                ax.text(i, v + 0.5, str(v), color="black", ha="center", fontsize=12)
 
         for i, v in enumerate(states_explored):
-            if v != 0:  # Avoid displaying for 0 values
-                ax.text(i + bar_width, v + 0.5, str(v), color="orange", ha="center", fontsize=10)
+            if v != 0:
+                ax.text(i + bar_width, v + 0.5, str(v), color="black", ha="center", fontsize=12)
+
+        for i, v in enumerate(times_taken):
+            if v != 0:
+                ax.text(i + 2 * bar_width, v + 0.5, f"{v:.4f}", color="black", ha="center", fontsize=12)
 
         # Set labels and title
-        ax.set_xlabel("Algorithms")
-        ax.set_ylabel("Values")
-        ax.set_title("Comparison of Algorithms (Path Length vs States Explored)")
+        ax.set_xlabel("Algorithms", fontsize=14)
+        ax.set_ylabel("Values", fontsize=14)
+        ax.set_title("Comparison of Algorithms (Path Length, States Explored, Time Taken)", fontsize=16)
 
         # Set x-ticks and labels
-        ax.set_xticks([p + bar_width / 2 for p in index])
-        ax.set_xticklabels(algorithms)
+        ax.set_xticks([p + bar_width for p in index])  # Center the x-ticks
+        ax.set_xticklabels(algorithms, fontsize=12)
 
-        # Add legend and improve layout
-        ax.legend(loc="best")
-        self.figure.tight_layout(pad=2.0)
+        # Add grid and adjust aesthetics
+        ax.grid(True, linestyle="--", alpha=0.7)
+        ax.legend(loc="upper left", fontsize=12)
+        self.figure.tight_layout(pad=3.0)  # Adjust layout to avoid overlap
 
         # Redraw the canvas
         self.canvas.draw()
-

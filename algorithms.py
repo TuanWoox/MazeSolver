@@ -2,6 +2,8 @@
 from queue import Queue
 import heapq
 import random
+import time
+
 class Node:
     def __init__(self, state, parent=None, action=None, cost=0, priority=0):
         self.state = state
@@ -79,6 +81,9 @@ class Maze:
         frontier_states = set()
         frontier_states.add(start.state)
 
+        # Start timing
+        start_time = time.time()
+
         while not frontier.empty():
             # Get the next node from the frontier
             node = frontier.get()
@@ -90,7 +95,9 @@ class Maze:
 
             # If this node contains the goal state, reconstruct the solution
             if node.state == self.goal:
-                return self.backtrack_solution(node)
+                end_time = time.time()  # End timing
+                elapsed_time = end_time - start_time  # Calculate elapsed time
+                return elapsed_time, self.backtrack_solution(node)
 
             # Mark the state as explored
             self.explored.add(node.state)
@@ -105,8 +112,6 @@ class Maze:
         raise Exception("no solution")
 
 
-    import random
-
     def dfs_solve(self, visualize):
         """Improved DFS with intelligent restarts, randomization, and backtracking."""
         self.num_explored = 0
@@ -120,6 +125,7 @@ class Maze:
 
         # Track visited nodes to prevent redundant restarts
         visited_once = set()
+        start_time = time.time()
 
         while frontier:
             # Pop the last node from the stack
@@ -129,9 +135,10 @@ class Maze:
             # Visualize the current state
             visualize(node.state)
 
-            # If the goal is reached, reconstruct the solution
             if node.state == self.goal:
-                return self.backtrack_solution(node)
+                end_time = time.time()  # Record end time when solution is found
+                elapsed_time = end_time - start_time  # Calculate time taken
+                return elapsed_time, self.backtrack_solution(node)  # Return solution and time taken
 
             # Mark the current state as explored
             self.explored.add(node.state)
@@ -181,7 +188,7 @@ class Maze:
 
         heapq.heappush(frontier, (start.priority, start))
         frontier_set.add(start.state)
-
+        start_time = time.time()
         while frontier:
             _, node = heapq.heappop(frontier)
             frontier_set.remove(node.state)
@@ -190,9 +197,10 @@ class Maze:
             # Visualize greedy state based only on heuristic value
             visualize(node.state, algorithm='Greedy', value=node.priority)
 
-            # Check if the goal is reached
             if node.state == self.goal:
-                return self.backtrack_solution(node)
+                end_time = time.time()  # Record end time when solution is found
+                elapsed_time = end_time - start_time  # Calculate time taken
+                return elapsed_time, self.backtrack_solution(node)  # Return solution and time taken
 
             self.explored.add(node.state)
 
@@ -218,7 +226,7 @@ class Maze:
         # Frontier initialized with the start node, prioritized by the heuristic
         frontier = []
         heapq.heappush(frontier, (start.priority, start))
-
+        start_time = time.time()
         while frontier:
             _, node = heapq.heappop(frontier)  # Get the node with the lowest f(n)
             self.num_explored += 1
@@ -226,9 +234,11 @@ class Maze:
             # Visualize the current state
             visualize(node.state)
 
-            # If we have reached the goal, backtrack to find the solution
             if node.state == self.goal:
-                return self.backtrack_solution(node)
+                end_time = time.time()  # Record end time when solution is found
+                elapsed_time = end_time - start_time  # Calculate time taken
+                return elapsed_time, self.backtrack_solution(node)  # Return solution and time taken
+
 
             # Mark the current node as explored
             self.explored.add(node.state)
@@ -296,7 +306,7 @@ class Maze:
     def hill_climb_solve(self, visualize, max_restarts=5):
         """Hill Climbing Search with Random Restarts."""
         self.num_explored = 0
-
+        start_time = time.time()
         def climb(start_node):
             """Performs a single hill climbing iteration."""
             current_node = start_node
@@ -305,7 +315,10 @@ class Maze:
                 visualize(current_node.state)
 
                 if current_node.state == self.goal:
-                    return self.backtrack_solution(current_node)
+                    end_time = time.time()  # Record end time when solution is found
+                    elapsed_time = end_time - start_time  # Calculate time taken
+                    return elapsed_time, self.backtrack_solution(current_node)
+
 
                 self.explored.add(current_node.state)
 
@@ -350,6 +363,7 @@ class Maze:
         self.explored = set()
 
         steps = 0
+        start_time=time.time()
         while frontier and steps < max_steps:
             steps += 1
             self.num_explored += len(frontier)
@@ -358,9 +372,10 @@ class Maze:
             for _, node in frontier:
                 visualize(node.state)
 
-                # If the goal is found, return the solution
                 if node.state == self.goal:
-                    return self.backtrack_solution(node)
+                    end_time = time.time()  # Record end time when solution is found
+                    elapsed_time = end_time - start_time  # Calculate time taken
+                    return elapsed_time, self.backtrack_solution(node)  # Return solution and time taken    
 
                 self.explored.add(node.state)
 

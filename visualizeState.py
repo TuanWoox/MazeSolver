@@ -28,7 +28,7 @@ class MazeApp(QMainWindow):
         self.player_position = self.maze.start  # Initialize player's position at start
         self.step_count = 0  # Initialize step count to 0
         # Background setup
-        
+        self.list_report = [];
 
     def init_ui(self):
         # Main widget and layout
@@ -217,19 +217,41 @@ class MazeApp(QMainWindow):
 
         try:
             # Solve the maze with visualization callback
-            path = solve_method(self.visualize)
-            
+            time_taken, path = solve_method(self.visualize)
+
             # If a path is found, draw it
             if path:
                 self.draw_path(path)
+                print(f"{time_taken:.4f}")
                 
                 # Get exploration statistics
                 num_explored = self.maze.num_explored
                 steps_to_goal = len(path)
                 
+                # Check if method already exists in the report
+                existing_report = next(
+                    (report for report in self.list_report if report["Name"] == method_name), None
+                )
+                
+                # If it exists, compare the time and replace if the new time is smaller
+                if existing_report:
+                    if existing_report["Time_Taken"] > time_taken:  # If the new time is smaller
+                        existing_report["Explore_States"] = num_explored
+                        existing_report["Path_Steps_Counts"] = steps_to_goal
+                        existing_report["Time_Taken"] = time_taken
+                else:
+                    # If no match, add new report
+                    report = {
+                        "Name": method_name,
+                        "Explore_States": num_explored,
+                        "Path_Steps_Counts": steps_to_goal,
+                        "Time_Taken": time_taken,
+                    }
+                    self.list_report.append(report)
+                
                 # Update status with solving details
                 self.status_label.setText(
-                    f"{method_name} complete! Explored States: {num_explored}, Steps to Goal: {steps_to_goal}"
+                    f"{method_name} complete! Explored States: {num_explored}, Steps to Goal: {steps_to_goal}, Time Taken: {time_taken:.4f} seconds"
                 )
             else:
                 # Handle case where no path is found
@@ -241,6 +263,7 @@ class MazeApp(QMainWindow):
         
         # Ensure start and end points are visible
         self.draw_start_end_points()
+
 
     def clear_cells(self):
         """Clears the solution path from the maze visualization."""
@@ -366,6 +389,7 @@ class MazeApp(QMainWindow):
             self.maze = Maze(selected_map)  # Load the selected maze
             self.draw_maze()  # Refresh the maze display
             self.status_label.setText(f"Loaded map from '{selected_map}'")
+            self.list_report = [];
         else:
             self.status_label.setText("Map loading canceled.")
 
@@ -380,6 +404,7 @@ class MazeApp(QMainWindow):
         def reload_map():
             self.maze = Maze(self.maze.filename) 
             self.draw_maze()  
+            self.list_report = [];
 
         self.edit_window = EditMaze(self.maze.filename, reload_map)
         self.edit_window.show()
@@ -406,49 +431,12 @@ class MazeApp(QMainWindow):
     from report_window import ReportWindow  # Import the ReportWindow class
     
     def analyze_algorithms(self):
-        """Compares all algorithms and generates a detailed report."""
-        self.status_label.setText("Analyzing algorithms...")
+        """Compares algorithms and generates a report based on list_report."""
+        self.status_label.setText("Generating report...")
         QApplication.processEvents()
 
-        # List to store results
-        results = []
-
-        # Define algorithms to test
-        algorithms = [
-            (self.maze.bfs_solve, "BFS"),
-            (self.maze.dfs_solve, "DFS"),
-            (self.maze.a_star_solve, "A*"),
-            (self.maze.greedy_solve, "Greedy"),
-            (self.maze.hill_climb_solve, "Hill Climbing"),
-            (self.maze.beam_search_solve, "Beam Search"),
-        ]
-
-        # Analyze each algorithm
-        for solve_method, name in algorithms:
-            try:
-                # Reset the maze state before solving
-                self.maze.reset_state()
-
-                # Solve the maze without visualization
-                path = solve_method(lambda x: None)
-
-                # Calculate path length and states explored
-                steps_to_goal = len(path) if path else "N/A"
-                num_explored = self.maze.num_explored
-
-                # Append results
-                results.append((name, steps_to_goal, num_explored))
-            
-            except Exception as e:
-                # Append error details to results
-                results.append((name, "Error", str(e)))
-
-        # Update status label for analysis completion
-        self.status_label.setText("Analysis complete! Opening report...")
-        QApplication.processEvents()
-
-        # Open the Report Window
-        self.report_window = ReportWindow(results, self)
+        # Open the Report Window with the list_report data
+        self.report_window = ReportWindow(self.list_report, self)
         self.report_window.exec_()
 
 
