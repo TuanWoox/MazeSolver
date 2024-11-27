@@ -287,7 +287,7 @@ class MazeApp(QMainWindow):
         princess_item.setPos(x_goal + self.cell_size * 0.1, y_goal + self.cell_size * 0.1)
         self.scene.addItem(princess_item)
 
-    def visualize(self, state):
+    def visualize(self, state, algorithm=None, value=None):
         """Visually indicates a visited cell during maze solving and records it."""
         row, col = state
         x = col * self.cell_size
@@ -295,14 +295,38 @@ class MazeApp(QMainWindow):
 
         # Avoid overwriting start, goal, and wall points
         if state != self.maze.start and state != self.maze.goal and not self.maze.walls[row][col]:
-            # Create a yellow rectangle for the visited cell
+            # Create a rectangle for the visited cell, with different colors for each algorithm
             rect = QGraphicsRectItem(x, y, self.cell_size, self.cell_size)
-            rect.setBrush(QBrush(QColor("#FFC300")))  # Yellow color for visited cells
+            
+            if algorithm == 'Greedy':
+                # Yellow color for greedy (based on heuristic)
+                rect.setBrush(QBrush(QColor("#FFC300")))  # Yellow
+            elif algorithm == 'A*':
+                # Blue color for A* (based on cost + heuristic)
+                rect.setBrush(QBrush(QColor("#2196F3")))  # Blue
+            elif algorithm == 'DFS':
+                # Green color for DFS
+                rect.setBrush(QBrush(QColor("#4CAF50")))  # Green
+            elif algorithm == 'HillClimbing':
+                # Red color for Hill Climbing
+                rect.setBrush(QBrush(QColor("#F44336")))  # Red
+            elif algorithm == 'BeamSearch':
+                # Purple color for Beam Search
+                rect.setBrush(QBrush(QColor("#9C27B0")))  # Purple
+            elif algorithm == 'DFS_Restart':
+                # Cyan color for DFS with restarts
+                rect.setBrush(QBrush(QColor("#00BCD4")))  # Cyan
+            else:
+                # Default color for other cases
+                rect.setBrush(QBrush(QColor("#FFEB3B")))  # Light yellow for default
+
             rect.setPen(QPen(Qt.NoPen))
             self.scene.addItem(rect)
 
         # Redraw start and goal points to ensure they are visible
         self.draw_start_end_points()
+        
+        
         QApplication.processEvents()
         QTimer.singleShot(10, lambda: None)  # Small delay for visualization
 

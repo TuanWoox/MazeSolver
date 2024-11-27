@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 
 # Ignore virtual environments
-myenv
+myenv/
 venv/
 env/
 
