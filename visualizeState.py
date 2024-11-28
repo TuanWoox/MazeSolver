@@ -197,7 +197,7 @@ class MazeApp(QMainWindow):
             self.solve_maze(self.maze.dfs_solve, "DFS")
         elif algorithm == "Solve A*":
             self.scene.clear()
-            self.solve_maze(self.maze.a_star_solve, "A*")
+            self.solve_maze(self.maze.a_star_solve1, "A*")
         elif algorithm == "Solve Greedy":
             self.scene.clear()
             self.solve_maze(self.maze.greedy_solve, "Greedy")
@@ -327,6 +327,9 @@ class MazeApp(QMainWindow):
             elif algorithm == 'A*':
                 # Blue color for A* (based on cost + heuristic)
                 rect.setBrush(QBrush(QColor("#2196F3")))  # Blue
+            elif algorithm == 'Visited':
+                # Pink color for nodes that have been visited
+                rect.setBrush(QBrush(QColor("#FF4081")))  # Pink
             elif algorithm == 'DFS':
                 # Green color for DFS
                 rect.setBrush(QBrush(QColor("#4CAF50")))  # Green
@@ -349,9 +352,8 @@ class MazeApp(QMainWindow):
         # Redraw start and goal points to ensure they are visible
         self.draw_start_end_points()
         
-        
         QApplication.processEvents()
-        QTimer.singleShot(10, lambda: None)  # Small delay for visualization
+        QTimer.singleShot(50, lambda: None)  # Small delay for visualization
 
 
     def draw_path(self, path):

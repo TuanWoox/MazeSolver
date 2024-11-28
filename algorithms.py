@@ -171,48 +171,57 @@ class Maze:
 
         raise Exception("No solution found using DFS.")
 
-
-
-
-
     def greedy_solve(self, visualize):
-        """Greedy Best-First Search optimized for speed and memory."""
+        """Greedy Best-First Search with improved heuristic and debugging."""
         self.num_explored = 0
+        self.explored = set()  # Initialize the explored set
         start = Node(state=self.start, parent=None, action=None)
         start.priority = self.heuristic(start.state)
 
-        # Use sets to track explored and frontier states
-        self.explored = set()
+        # Priority queue for frontier and dictionary to track priorities
         frontier = []
-        frontier_set = set()
+        frontier_map = {}
 
         heapq.heappush(frontier, (start.priority, start))
-        frontier_set.add(start.state)
+        frontier_map[start.state] = start.priority
         start_time = time.time()
+
         while frontier:
+            # Get the node with the lowest heuristic value
             _, node = heapq.heappop(frontier)
-            frontier_set.remove(node.state)
+
+            # Skip if already explored
+            if node.state in self.explored:
+                continue
+
+            # Visualize the current state
+            visualize(node.state, algorithm='Greedy', value=node.priority)
             self.num_explored += 1
 
-            # Visualize greedy state based only on heuristic value
-            visualize(node.state, algorithm='Greedy', value=node.priority)
-
+            # Check if goal is reached
             if node.state == self.goal:
-                end_time = time.time()  # Record end time when solution is found
-                elapsed_time = end_time - start_time  # Calculate time taken
-                return elapsed_time, self.backtrack_solution(node)  # Return solution and time taken
+                end_time = time.time()
+                elapsed_time = end_time - start_time
+                return elapsed_time, self.backtrack_solution(node)
 
+            # Mark state as explored
             self.explored.add(node.state)
 
-            # Process neighbors
+            # Explore neighbors
             for action, state in self.neighbors(node.state):
-                if state not in self.explored and state not in frontier_set:
+                if state not in self.explored:
                     child = Node(state=state, parent=node, action=action)
-                    child.priority = self.heuristic(state)  # Only heuristic used in greedy
-                    heapq.heappush(frontier, (child.priority, child))
-                    frontier_set.add(state)
+                    child.priority = self.heuristic(state)
+
+                    # Only add to frontier if not present or priority is lower
+                    if state not in frontier_map or child.priority < frontier_map[state]:
+                        heapq.heappush(frontier, (child.priority, child))
+                        frontier_map[state] = child.priority
 
         raise Exception("No solution found with Greedy Best-First Search.")
+
+
+
 
     def a_star_solve(self, visualize):
         """A* Search."""
@@ -242,10 +251,13 @@ class Maze:
 
             # Mark the current node as explored
             self.explored.add(node.state)
-
+            
             # Check all neighbors and add to the frontier
             for action, state in self.neighbors(node.state):
                 if state not in self.explored:
+                    # Mark the neighbor as visited
+                    visualize(state, algorithm='Visited')
+
                     # Calculate the cost to reach this state (g(n) = parent_cost + 1)
                     new_cost = node.cost + 1
                     child = Node(state=state, parent=node, action=action, cost=new_cost)
@@ -257,37 +269,73 @@ class Maze:
                     heapq.heappush(frontier, (child.priority, child))
 
         raise Exception("No solution found with A* Search.")
+    
+    def a_star_solve1(self, visualize):
+        """A* Search with guaranteed optimal paths."""
+        self.num_explored = 0
+        start = Node(state=self.start, parent=None, action=None, cost=0)
+        start.priority = self.heuristic(start.state)  # f(n) = g(n) + h(n)
+
+        # Frontier and tracking costs
+        frontier = []
+        frontier_costs = {start.state: 0}  # Tracks g(n)
+        heapq.heappush(frontier, (start.priority, start))
+
+        # Explored set
+        self.explored = set()
+
+        start_time = time.time()
+        while frontier:
+            _, node = heapq.heappop(frontier)
+
+            # If this state is already explored, skip
+            if node.state in self.explored:
+                continue
+
+            # Visualize the current state
+            visualize(node.state)
+            self.num_explored += 1
+
+            # Goal check
+            if node.state == self.goal:
+                elapsed_time = time.time() - start_time
+                return elapsed_time, self.backtrack_solution(node)
+
+            # Mark node as explored
+            self.explored.add(node.state)
+
+            # Expand neighbors
+            for action, state in self.neighbors(node.state):
+                new_cost = node.cost + 1  # g(n)
+                if state not in self.explored and (state not in frontier_costs or new_cost < frontier_costs[state]):
+                    child = Node(state=state, parent=node, action=action, cost=new_cost)
+                    priority = new_cost + self.heuristic(state)  # f(n)
+                    heapq.heappush(frontier, (priority, child))
+                    frontier_costs[state] = new_cost
+
+                    # Visualize visited neighbor
+                    visualize(state, algorithm="Visited")
+
+        raise Exception("No solution found.")
 
     def heuristic(self, state):
-        """A* heuristic that combines Manhattan distance with a bias toward open cells near the goal."""
+        """Improved heuristic: Manhattan distance + penalty for being near walls."""
         row, col = state
         goal_row, goal_col = self.goal
 
-        # Calculate the basic Manhattan distance to the goal (B)
+        # Base Manhattan distance to the goal
         base_distance = abs(row - goal_row) + abs(col - goal_col)
 
-        # Initialize the minimum distance to an adjacent empty cell near the goal (B)
-        min_distance_to_empty = float('inf')
-
-        # Check the neighboring cells of the goal (B)
+        # Penalty for states adjacent to walls
+        wall_penalty = 0
         for r_offset, c_offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            neighbor_row = goal_row + r_offset
-            neighbor_col = goal_col + c_offset
-
-            # Ensure the neighbor is within bounds
+            neighbor_row = row + r_offset
+            neighbor_col = col + c_offset
             if 0 <= neighbor_row < self.height and 0 <= neighbor_col < self.width:
-                # Check if the neighbor is an empty cell
-                if not self.walls[neighbor_row][neighbor_col]:
-                    # Calculate the distance from the current state to this empty cell
-                    distance_to_empty = abs(row - neighbor_row) + abs(col - neighbor_col)
-                    min_distance_to_empty = min(min_distance_to_empty, distance_to_empty)
+                if self.walls[neighbor_row][neighbor_col]:
+                    wall_penalty += 1
 
-        # If we found an empty neighboring cell, prioritize paths leading to it
-        if min_distance_to_empty < float('inf'):
-            return base_distance + min_distance_to_empty  # Encourage moving towards nearby empty cells
-
-        return base_distance  # Fallback to the base Manhattan distance
-
+        return base_distance + wall_penalty * 0.3  # Adjust weight for penalty
 
 
 
