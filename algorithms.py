@@ -219,56 +219,6 @@ class Maze:
                         frontier_map[state] = child.priority
 
         raise Exception("No solution found with Greedy Best-First Search.")
-
-
-
-
-    def a_star_solve(self, visualize):
-        """A* Search."""
-        self.num_explored = 0
-        start = Node(state=self.start, parent=None, action=None, cost=0)
-        start.priority = self.heuristic(start.state)  # f(n) = g(n) + h(n)
-
-        # Set of explored states to avoid revisiting
-        self.explored = set()
-
-        # Frontier initialized with the start node, prioritized by the heuristic
-        frontier = []
-        heapq.heappush(frontier, (start.priority, start))
-        start_time = time.time()
-        while frontier:
-            _, node = heapq.heappop(frontier)  # Get the node with the lowest f(n)
-            self.num_explored += 1
-
-            # Visualize the current state
-            visualize(node.state)
-
-            if node.state == self.goal:
-                end_time = time.time()  # Record end time when solution is found
-                elapsed_time = end_time - start_time  # Calculate time taken
-                return elapsed_time, self.backtrack_solution(node)  # Return solution and time taken
-
-
-            # Mark the current node as explored
-            self.explored.add(node.state)
-            
-            # Check all neighbors and add to the frontier
-            for action, state in self.neighbors(node.state):
-                if state not in self.explored:
-                    # Mark the neighbor as visited
-                    visualize(state, algorithm='Visited')
-
-                    # Calculate the cost to reach this state (g(n) = parent_cost + 1)
-                    new_cost = node.cost + 1
-                    child = Node(state=state, parent=node, action=action, cost=new_cost)
-                    
-                    # f(n) = g(n) + h(n), where g(n) = cost to reach node, h(n) = heuristic to goal
-                    child.priority = new_cost + self.heuristic(state)
-
-                    # Add the child to the frontier (priority queue)
-                    heapq.heappush(frontier, (child.priority, child))
-
-        raise Exception("No solution found with A* Search.")
     
     def a_star_solve1(self, visualize):
         """A* Search with guaranteed optimal paths."""
