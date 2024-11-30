@@ -51,6 +51,7 @@ class Maze:
     def reset_state(self):
         """Resets maze state for a new solving attempt."""
         self.num_explored = 0
+    
     def neighbors(self, state):
         row, col = state
         candidates = [
@@ -108,12 +109,14 @@ class Maze:
                     child = Node(state=state, parent=node, action=action)
                     frontier.put(child)
                     frontier_states.add(state)
+                    visualize(state, algorithm="Visited")
+
 
         raise Exception("no solution")
 
 
     def dfs_solve(self, visualize):
-        """Improved DFS with intelligent restarts, randomization, and backtracking."""
+        """Improved DFS with intelligent restarts, randomization, backtracking, and neighbor prioritization."""
         self.num_explored = 0
         start = Node(state=self.start, parent=None, action=None)
 
@@ -143,9 +146,15 @@ class Maze:
             # Mark the current state as explored
             self.explored.add(node.state)
 
-            # Get neighbors and shuffle them for randomization
-            neighbors = list(self.neighbors(node.state))
-            random.shuffle(neighbors)  # Randomly shuffle the neighbors
+            # Get neighbors, prioritize them by heuristic, and shuffle for randomization
+            neighbors = [
+                (action, state)
+                for action, state in self.neighbors(node.state)
+                if state not in self.explored
+            ]
+            for action, state in neighbors:
+                visualize(state, algorithm="Visited")  # Visualize neighbors before adding
+            random.shuffle(neighbors)  # Shuffle for randomized DFS behavior
 
             # Add neighbors to the frontier
             neighbors_added = False
@@ -156,20 +165,19 @@ class Maze:
                     neighbors_added = True
                     visited_once.add(state)  # Mark neighbor as visited at least once
 
-            # If no neighbors were added, backtrack intelligently or reset
+            # If no neighbors were added, intelligently backtrack or restart
             if not neighbors_added:
-                # If the frontier is empty, check if reset is necessary
                 if not frontier:
+                    # Restart from the nearest unvisited node by heuristic, or from start
                     unvisited = [state for state in visited_once if state not in self.explored]
                     if unvisited:
-                        # Restart from the nearest unexplored node to the start
                         closest_unvisited = min(unvisited, key=lambda s: self.heuristic(s))
                         frontier.append(Node(state=closest_unvisited, parent=None, action=None))
                     else:
-                        # Restart completely if no unvisited nodes are found
                         frontier.append(start)
 
         raise Exception("No solution found using DFS.")
+
 
     def greedy_solve(self, visualize):
         """Greedy Best-First Search with improved heuristic and debugging."""
@@ -217,6 +225,9 @@ class Maze:
                     if state not in frontier_map or child.priority < frontier_map[state]:
                         heapq.heappush(frontier, (child.priority, child))
                         frontier_map[state] = child.priority
+                        visualize(state, algorithm="Visited")
+
+                    
 
         raise Exception("No solution found with Greedy Best-First Search.")
     
@@ -328,6 +339,9 @@ class Maze:
                 ]
                 for neighbor in neighbors:
                     neighbor.priority = self.heuristic(neighbor.state)
+                    visualize(neighbor.state, algorithm="Visited")  # Visualizing neighbor   
+                    
+
 
                 if not neighbors:
                     return None  # Stuck at a dead end
@@ -385,6 +399,7 @@ class Maze:
                         child = Node(state=state, parent=node, action=action)
                         child.priority = self.heuristic(state)
                         next_frontier.append((child.priority, child))
+                        visualize(state, algorithm="Visited")  # Visualizing neighbor   
 
             # Keep the best `beam_width` nodes by heuristic value
             next_frontier.sort(key=lambda x: x[0])

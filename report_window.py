@@ -32,7 +32,6 @@ class ReportWindow(QDialog):
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.close)
         layout.addWidget(close_button)
-
     def plot_chart(self):
         # Extract algorithm names, path lengths, states explored, and time taken from results
         algorithms = [result["Name"] for result in self.results]
@@ -49,57 +48,58 @@ class ReportWindow(QDialog):
             for result in self.results
         ]
 
+        # Define unique colors for each algorithm
+        colors = {
+            "DFS": "royalblue",
+            "BFS": "darkorange",
+            "A*": "seagreen",
+            "Greedy": "mediumpurple",
+            "Beam Search": "gold",
+            "Climbing HIll": "crimson"
+        }
+        bar_colors = [colors.get(algo, "gray") for algo in algorithms]  # Default to gray if not found
+
         # Clear the figure for a clean plot
         self.figure.clear()
 
-        # Create the bar chart
-        ax = self.figure.add_subplot(111)
-        bar_width = 0.25  # Bar width for better spacing between bars
+        # Create subplots
+        ax1 = self.figure.add_subplot(311)  # 3 rows, 1 column, plot 1
+        ax2 = self.figure.add_subplot(312)  # 3 rows, 1 column, plot 2
+        ax3 = self.figure.add_subplot(313)  # 3 rows, 1 column, plot 3
+
+        # Bar width
+        bar_width = 0.35
         index = range(len(algorithms))
 
-        # Create bars for Path Length, States Explored, and Time Taken
-        bar1 = ax.bar(index, path_lengths, bar_width, label="Path Lengths", color="royalblue")
-        bar2 = ax.bar(
-            [p + bar_width for p in index],
-            states_explored,
-            bar_width,
-            label="States Explored",
-            color="darkorange",
-        )
-        bar3 = ax.bar(
-            [p + 2 * bar_width for p in index],
-            times_taken,
-            bar_width,
-            label="Time Taken (s)",
-            color="seagreen",
-        )
+        # Plot States Explored
+        ax1.bar(index, states_explored, bar_width, color=bar_colors)
+        ax1.set_title("States Explored Comparison", fontsize=14)
+        ax1.set_xticks(index)
+        ax1.set_xticklabels(algorithms, fontsize=10)
+        ax1.set_ylabel("States Explored", fontsize=12)
+        ax1.grid(True, linestyle="--", alpha=0.7)
 
-        # Add value annotations on top of the bars
-        for i, v in enumerate(path_lengths):
-            if v != 0:
-                ax.text(i, v + 0.5, str(v), color="black", ha="center", fontsize=12)
+        # Plot Path Lengths
+        ax2.bar(index, path_lengths, bar_width, color=bar_colors)
+        ax2.set_title("Path Lengths Comparison", fontsize=14)
+        ax2.set_xticks(index)
+        ax2.set_xticklabels(algorithms, fontsize=10)
+        ax2.set_ylabel("Path Lengths", fontsize=12)
+        ax2.grid(True, linestyle="--", alpha=0.7)
 
-        for i, v in enumerate(states_explored):
-            if v != 0:
-                ax.text(i + bar_width, v + 0.5, str(v), color="black", ha="center", fontsize=12)
+        # Plot Time Taken
+        ax3.bar(index, times_taken, bar_width, color=bar_colors)
+        ax3.set_title("Time Taken Comparison", fontsize=14)
+        ax3.set_xticks(index)
+        ax3.set_xticklabels(algorithms, fontsize=10)
+        ax3.set_ylabel("Time (s)", fontsize=12)
+        ax3.grid(True, linestyle="--", alpha=0.7)
 
-        for i, v in enumerate(times_taken):
-            if v != 0:
-                ax.text(i + 2 * bar_width, v + 0.5, f"{v:.4f}", color="black", ha="center", fontsize=12)
-
-        # Set labels and title
-        ax.set_xlabel("Algorithms", fontsize=14)
-        ax.set_ylabel("Values", fontsize=14)
-        ax.set_title("Comparison of Algorithms (Path Length, States Explored, Time Taken)", fontsize=16)
-
-        # Set x-ticks and labels
-        ax.set_xticks([p + bar_width for p in index])  # Center the x-ticks
-        ax.set_xticklabels(algorithms, fontsize=12)
-
-        # Add grid and adjust aesthetics
-        ax.grid(True, linestyle="--", alpha=0.7)
-        ax.legend(loc="upper left", fontsize=12)
-        self.figure.tight_layout(pad=3.0)  # Adjust layout to avoid overlap
+        # Adjust layout to prevent overlap
+        self.figure.tight_layout(pad=3.0)
 
         # Redraw the canvas
         self.canvas.draw()
+
+
+
