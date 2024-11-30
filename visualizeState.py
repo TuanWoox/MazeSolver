@@ -28,7 +28,10 @@ class MazeApp(QMainWindow):
         self.player_position = self.maze.start  # Initialize player's position at start
         self.step_count = 0  # Initialize step count to 0
         # Background setup
-        self.list_report = [];
+        self.list_report = []
+        self.maze = maze
+        self.solution_path = []  # Initialize the solution path list
+        self.stop_requested = False
 
     def init_ui(self):
         # Main widget and layout
@@ -210,29 +213,40 @@ class MazeApp(QMainWindow):
 
     def solve_maze(self, solve_method, method_name):
         """Solve the maze using the specified method and update the UI."""
-        # Clear previous visualization
+        if self.stop_requested:  # Prevent running multiple algorithms simultaneously
+            return
+
+        # Stop any current algorithm and reset visualization
+        self.stop_requested = True
+        QApplication.processEvents()
+        self.clear_cells()
+
+        # Reset the stop flag for the new algorithm
+        self.stop_requested = False
         self.status_label.setText(f"Solving with {method_name}...")
         QApplication.processEvents()
-        self.draw_maze()
+
+        # Disable the "Apply Algorithm" button
+        self.find_button("Apply Algorithm").setEnabled(False)
 
         try:
             # Solve the maze with visualization callback
-            time_taken, path = solve_method(self.visualize)
+            time_taken, path = solve_method(self.visualize_with_interrupt)
 
             # If a path is found, draw it
-            if path:
+            if path and not self.stop_requested:
                 self.draw_path(path)
                 print(f"{time_taken:.4f}")
-                
+
                 # Get exploration statistics
                 num_explored = self.maze.num_explored
                 steps_to_goal = len(path)
-                
+
                 # Check if method already exists in the report
                 existing_report = next(
                     (report for report in self.list_report if report["Name"] == method_name), None
                 )
-                
+
                 # If it exists, compare the time and replace if the new time is smaller
                 if existing_report:
                     if existing_report["Time_Taken"] > time_taken:  # If the new time is smaller
@@ -248,39 +262,87 @@ class MazeApp(QMainWindow):
                         "Time_Taken": time_taken,
                     }
                     self.list_report.append(report)
-                
+
                 # Update status with solving details
                 self.status_label.setText(
                     f"{method_name} complete! Explored States: {num_explored}, Steps to Goal: {steps_to_goal}, Time Taken: {time_taken:.4f} seconds"
                 )
-            else:
+            elif not self.stop_requested:
                 # Handle case where no path is found
                 self.status_label.setText(f"No path found with {method_name}")
-        
+            else:
+                # If interrupted
+                self.status_label.setText(f"{method_name} interrupted.")
         except Exception as e:
             # Handle any errors during solving
             self.status_label.setText(f"Error solving maze: {str(e)}")
-        
+
         # Ensure start and end points are visible
         self.draw_start_end_points()
 
+        # Re-enable the "Apply Algorithm" button
+        self.find_button("Apply Algorithm").setEnabled(True)
+
+    def find_button(self, button_text):
+        """Finds a button in the controls layout by its text."""
+        for i in range(self.controls_layout.count()):
+            widget = self.controls_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton) and widget.text() == button_text:
+                return widget
+        return None
+
+
+    def visualize_with_interrupt(self, state, algorithm=None, value=None):
+        """Visually indicates a visited cell and checks for interruption."""
+        if self.stop_requested:
+            raise Exception("Algorithm interrupted")  # Terminate the solving process
+
+        row, col = state
+        x = col * self.cell_size
+        y = row * self.cell_size
+
+        # Avoid overwriting start, goal, and wall points
+        if state != self.maze.start and state != self.maze.goal and not self.maze.walls[row][col]:
+            # Create a rectangle for the visited cell, with different colors for each algorithm
+            rect = QGraphicsRectItem(x, y, self.cell_size, self.cell_size)
+
+            # Color coding for different algorithms
+            if algorithm == 'Greedy':
+                rect.setBrush(QBrush(QColor("#FFC300")))  # Yellow for Greedy
+            elif algorithm == 'A*':
+                rect.setBrush(QBrush(QColor("#2196F3")))  # Blue for A*
+            elif algorithm == 'Visited':
+                rect.setBrush(QBrush(QColor("#FF4081")))  # Pink for visited nodes
+            elif algorithm == 'DFS':
+                rect.setBrush(QBrush(QColor("#4CAF50")))  # Green for DFS
+            elif algorithm == 'HillClimbing':
+                rect.setBrush(QBrush(QColor("#F44336")))  # Red for Hill Climbing
+            elif algorithm == 'BeamSearch':
+                rect.setBrush(QBrush(QColor("#9C27B0")))  # Purple for Beam Search
+            elif algorithm == 'DFS_Restart':
+                rect.setBrush(QBrush(QColor("#00BCD4")))  # Cyan for DFS with restarts
+            else:
+                rect.setBrush(QBrush(QColor("#FFEB3B")))  # Light yellow for default
+
+            rect.setPen(QPen(Qt.NoPen))
+            self.scene.addItem(rect)
+
+        # Redraw start and goal points to ensure they are visible
+        self.draw_start_end_points()
+
+        QApplication.processEvents()
+        QTimer.singleShot(50, lambda: None)  # Small delay for visualization
+
+
 
     def clear_cells(self):
-        """Clears the solution path from the maze visualization."""
-        for cell in self.solution_path:  # Assuming you have a `solution_path` list
-            row, col = cell
-            x = col * self.cell_size
-            y = row * self.cell_size
-
-            # Find the rectangle corresponding to the cell and remove it
-            for item in self.scene.items():
-                if isinstance(item, QGraphicsRectItem):
-                    rect = item.rect()
-                    if rect.x() == x and rect.y() == y:
-                        self.scene.removeItem(item)
-                        break
+        """Clears the solution path and any algorithm visualization."""
+        self.scene.clear()  # Clear all items from the scene
+        self.solution_path = []  # Reset solution path
+        self.stop_requested = False  # Reset the stop flag
 
         # Redraw the start and goal points to ensure visibility
+        self.draw_maze()
         self.draw_start_end_points()
 
 

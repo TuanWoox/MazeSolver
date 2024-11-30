@@ -247,6 +247,8 @@ class Maze:
 
         start_time = time.time()
         while frontier:
+            # if self.stop_requested:
+            #     return 0, []
             _, node = heapq.heappop(frontier)
 
             # If this state is already explored, skip
