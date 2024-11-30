@@ -310,7 +310,7 @@ class MazeApp(QMainWindow):
             if algorithm == 'Greedy':
                 rect.setBrush(QBrush(QColor("#FFC300")))  # Yellow for Greedy
             elif algorithm == 'A*':
-                rect.setBrush(QBrush(QColor("#2196F3")))  # Blue for A*
+                rect.setBrush(QBrush(QColor("#00BCD4")))  # Blue for A*
             elif algorithm == 'Visited':
                 rect.setBrush(QBrush(QColor("#FF4081")))  # Pink for visited nodes
             elif algorithm == 'DFS':
