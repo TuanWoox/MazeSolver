@@ -32,14 +32,15 @@ class ReportWindow(QDialog):
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.close)
         layout.addWidget(close_button)
+
     def plot_chart(self):
-        # Extract algorithm names, path lengths, states explored, and time taken from results
+        # Extract algorithm names and states explored
         algorithms = [result["Name"] for result in self.results]
         states_explored = [
             result["Explore_States"] if isinstance(result["Explore_States"], (int, float)) else 0
             for result in self.results
         ]
-        path_lengths = [
+        path_counts = [
             result["Path_Steps_Counts"] if isinstance(result["Path_Steps_Counts"], (int, float)) else 0
             for result in self.results
         ]
@@ -47,11 +48,8 @@ class ReportWindow(QDialog):
             result["Time_Taken"] if isinstance(result["Time_Taken"], (int, float)) else 0
             for result in self.results
         ]
-
-        # Define bar width and positions for grouped bars
-        bar_width = 0.2  # Width of each bar
-        indices = range(len(algorithms))  # Base x positions for the bars
-        offset = bar_width * 1.2  # Offset between metrics within each group
+        # Define bar width
+        bar_width = 0.8  # Wide bars with no space in between
 
         # Clear the figure for a clean plot
         self.figure.clear()
@@ -59,56 +57,84 @@ class ReportWindow(QDialog):
         # Create the axis
         ax = self.figure.add_subplot(111)
 
-        # Colors for each metric
-        colors = ["royalblue", "darkorange", "seagreen"]
-
-        # Plot grouped bars for each metric
+        # Plot bars for states explored
         bars1 = ax.bar(
-            [i - offset for i in indices],  # Shift left for States Explored
+            range(len(algorithms)),  # Base indices for each bar
             states_explored,
             bar_width,
-            label="States Explored",
-            color=colors[0]
+            color="royalblue"
         )
+
+        # Add algorithm names with states explored on top of each bar
+        for bar, algorithm, states in zip(bars1, algorithms, states_explored):
+            height = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,  # Center text on the bar
+                height + 1,  # Slightly above the bar
+                f'{algorithm} - {states}',  # Format: "Algorithm - States"
+                ha='center', va='bottom', fontsize=8.5, color='black'
+            )
+
+        # Offset the x-coordinates for path counts
+        offset_indices_path_counts = [x + 1 + len(algorithms) for x in range(len(algorithms))]
+
+        # Plot bars for path counts
         bars2 = ax.bar(
-            indices,  # Centered for Path Steps
-            path_lengths,
+            offset_indices_path_counts,  # Offset indices to place bars after the first set
+            path_counts,
             bar_width,
-            label="Path Steps",
-            color=colors[1]
+            color="orange"
         )
+
+        # Add algorithm names with path counts on top of each bar
+        for bar, algorithm, paths in zip(bars2, algorithms, path_counts):
+            height = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,  # Center text on the bar
+                height + 1,  # Slightly above the bar
+                f'{algorithm} - {paths}',  # Format: "Algorithm - Paths"
+                ha='center', va='bottom', fontsize=8.5, color='black'
+            )
+
+        # Offset the x-coordinates for time taken
+        offset_indices_time_taken = [x + 2 + 2 * len(algorithms) for x in range(len(algorithms))]
+
+        # Plot bars for time taken
         bars3 = ax.bar(
-            [i + offset for i in indices],  # Shift right for Time Taken
+            offset_indices_time_taken,  # Offset indices to place bars after the second set
             times_taken,
             bar_width,
-            label="Time Taken (s)",
-            color=colors[2]
+            color="green"
         )
 
-        # Annotate each bar with its value
-        for bars in [bars1, bars2, bars3]:
-            for bar in bars:
-                height = bar.get_height()
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2.0,
-                    height,
-                    f"{height:.2f}",
-                    ha="center",
-                    va="bottom",
-                    fontsize=9,
-                )
+        for bar, algorithm, time in zip(bars3, algorithms, times_taken):
+            height = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,  # Center text on the bar
+                height + 1,  # Slightly above the bar
+                f'{algorithm} - {time:.1f}',  # Format: "Algorithm - Time" with 2 decimal places
+                ha='center', va='bottom', fontsize=8.5, color='black'
+            )
 
-        # Set x-ticks and labels for algorithms (each algorithm should have its own tick)
-        ax.set_xticks([i for i in indices])  # Positions for algorithm names
-        ax.set_xticklabels(algorithms, fontsize=10)
+        # Set common x-axis label under the bars
+        ax.set_xlabel("Component Compared", fontsize=12, labelpad=15)
 
-        # Set the plot title and axis labels
-        ax.set_title("Algorithm Analysis Comparison", fontsize=14)
-        ax.set_ylabel("Metrics", fontsize=12)
-        ax.set_xlabel("Algorithms", fontsize=12)
+        # Remove x-ticks (since labels are on top)
+        ax.set_xticks([])
 
-        # Add the legend
-        ax.legend()
+        # Set y-axis label
+        ax.set_ylabel("Count", fontsize=12)
+
+        # Set plot title
+        ax.set_title("Components", fontsize=14)
+
+        # Add legend
+        ax.legend(
+            [bars1, bars2, bars3],
+            ['States Explored (Blue)', 'Path Counts (Orange)', 'Time Taken (Green)'],
+            loc='upper right',
+            fontsize=10
+        )
 
         # Adjust layout for better spacing
         self.figure.tight_layout(pad=3.0)
