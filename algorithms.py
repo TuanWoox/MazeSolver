@@ -92,7 +92,7 @@ class Maze:
             self.num_explored += 1
 
             # Visualize the explored state
-            visualize(node.state)
+            visualize(node.state,algorithm='BFS')
 
             # If this node contains the goal state, reconstruct the solution
             if node.state == self.goal:
@@ -136,7 +136,7 @@ class Maze:
             self.num_explored += 1
 
             # Visualize the current state
-            visualize(node.state)
+            visualize(node.state, algorithm='DFS')
 
             if node.state == self.goal:
                 end_time = time.time()  # Record end time when solution is found
@@ -256,7 +256,7 @@ class Maze:
                 continue
 
             # Visualize the current state
-            visualize(node.state)
+            visualize(node.state,algorithm='A*')
             self.num_explored += 1
 
             # Goal check
@@ -323,7 +323,7 @@ class Maze:
             current_node = start_node
             while True:
                 self.num_explored += 1
-                visualize(current_node.state)
+                visualize(current_node.state, algorithm='HillClimbing')
 
                 if current_node.state == self.goal:
                     end_time = time.time()  # Record end time when solution is found
@@ -384,7 +384,7 @@ class Maze:
 
             # Visualize all nodes in the current frontier
             for _, node in frontier:
-                visualize(node.state)
+                visualize(node.state,algorithm='BeamSearch')
 
                 if node.state == self.goal:
                     end_time = time.time()  # Record end time when solution is found
