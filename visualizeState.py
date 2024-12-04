@@ -39,11 +39,46 @@ class MazeApp(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
 
-        # Title Label
+        # Maze Solver Title
         self.title_label = QLabel("Maze Solver", self)
         self.title_label.setAlignment(Qt.AlignCenter)
         self.title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #2c3e50;")
         self.main_layout.addWidget(self.title_label)
+
+        # Team Banners (Two Rows)
+        # First row (2 members)
+        self.banner_row_1 = QHBoxLayout()
+        self.banner_label_1 = QLabel("Bạch Đức Cảnh - 22110012, Nguyễn Tiến Toàn - 22110078", self)
+        self.banner_label_1.setAlignment(Qt.AlignCenter)
+        self.banner_label_1.setStyleSheet("""
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px;
+        """)
+        self.banner_row_1.addWidget(self.banner_label_1)
+        
+        # Second row (2 members)
+        self.banner_row_2 = QHBoxLayout()
+        self.banner_label_2 = QLabel("Lý Đăng Triều - 22110080, Nguyễn Tuấn Vũ - 22110091", self)
+        self.banner_label_2.setAlignment(Qt.AlignCenter)
+        self.banner_label_2.setStyleSheet("""
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px;
+        """)
+        self.banner_row_2.addWidget(self.banner_label_2)
+
+        # Add the rows to the main layout
+        self.main_layout.addLayout(self.banner_row_1)
+        self.main_layout.addLayout(self.banner_row_2)
 
         # Maze Canvas (GraphicsView)
         self.scene = QGraphicsScene()
@@ -51,9 +86,9 @@ class MazeApp(QMainWindow):
         self.view.setStyleSheet("background-color: #ecf0f1;")
         self.main_layout.addWidget(self.view, stretch=1)
         
+        # Zoom Controls
         self.zoom_layout = QHBoxLayout()
         self.main_layout.addLayout(self.zoom_layout)
-
         self.add_button(self.zoom_layout, "Zoom In", self.zoom_in)
         self.add_button(self.zoom_layout, "Zoom Out", self.zoom_out)
         
@@ -64,10 +99,11 @@ class MazeApp(QMainWindow):
         self.main_layout.addWidget(self.status_label)
 
         # Control Buttons and Dropdown
-        self.controls_layout = QHBoxLayout()  # Make this an instance attribute
+        self.controls_layout = QHBoxLayout()
         self.main_layout.addLayout(self.controls_layout)
 
         self.setup_original_buttons()
+
 
     def add_button(self, layout, text, function):
         """Helper function to add buttons to a layout."""
@@ -601,7 +637,7 @@ class MazeApp(QMainWindow):
 
         # Load prince.png and scale it to fit the cell size
         prince_pixmap = QPixmap("prince.png").scaled(
-            self.cell_size * 0.8, self.cell_size * 0.8, Qt.KeepAspectRatio, Qt.SmoothTransformation
+            int(self.cell_size * 0.8), int(self.cell_size * 0.8), Qt.KeepAspectRatio, Qt.SmoothTransformation
         )
 
         # Create a QGraphicsPixmapItem for the player
