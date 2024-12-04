@@ -50,7 +50,9 @@ class ReportWindow(QDialog):
         ]
         # Define bar width
         bar_width = 0.8  # Wide bars with no space in between
-
+        fontSize = 8.5;
+        if len(states_explored) >= 5:
+            fontSize = 6.5;
         # Clear the figure for a clean plot
         self.figure.clear()
 
@@ -64,6 +66,7 @@ class ReportWindow(QDialog):
             bar_width,
             color="royalblue"
         )
+        
 
         # Add algorithm names with states explored on top of each bar
         for bar, algorithm, states in zip(bars1, algorithms, states_explored):
@@ -72,7 +75,7 @@ class ReportWindow(QDialog):
                 bar.get_x() + bar.get_width() / 2,  # Center text on the bar
                 height + 1,  # Slightly above the bar
                 f'{algorithm} - {states}',  # Format: "Algorithm - States"
-                ha='center', va='bottom', fontsize=8.5, color='black'
+                ha='center', va='bottom', fontsize=fontSize, color='black'
             )
 
         # Offset the x-coordinates for path counts
@@ -93,7 +96,7 @@ class ReportWindow(QDialog):
                 bar.get_x() + bar.get_width() / 2,  # Center text on the bar
                 height + 1,  # Slightly above the bar
                 f'{algorithm} - {paths}',  # Format: "Algorithm - Paths"
-                ha='center', va='bottom', fontsize=8.5, color='black'
+                ha='center', va='bottom', fontsize=fontSize, color='black'
             )
 
         # Offset the x-coordinates for time taken
@@ -113,7 +116,7 @@ class ReportWindow(QDialog):
                 bar.get_x() + bar.get_width() / 2,  # Center text on the bar
                 height + 1,  # Slightly above the bar
                 f'{algorithm} - {time:.1f}',  # Format: "Algorithm - Time" with 2 decimal places
-                ha='center', va='bottom', fontsize=8.5, color='black'
+                ha='center', va='bottom', fontsize=fontSize, color='black'
             )
 
         # Set common x-axis label under the bars

@@ -290,6 +290,12 @@ class MazeApp(QMainWindow):
                         existing_report["Path_Steps_Counts"] = steps_to_goal
                         existing_report["Time_Taken"] = time_taken
                 else:
+                    if(method_name == "Beam Search"): 
+                        method_name = "BS"
+                    elif(method_name == "Hill Climbing"):
+                        method_name ="HC"
+                    elif(method_name == "Greedy"):
+                        method_name = "GD"
                     # If no match, add new report
                     report = {
                         "Name": method_name,
@@ -545,6 +551,7 @@ class MazeApp(QMainWindow):
         subprocess.run(["python", "randomMaze.py"])
         self.maze = Maze("maze.txt")  # Reload the maze
         self.draw_maze()  # Refresh the maze display
+        self.list_report = []
         self.status_label.setText("New maze generated!")
     def save_map(self):
         """Saves the current maze to a predefined directory and filename."""
