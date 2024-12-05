@@ -298,7 +298,7 @@ class Maze:
                 if self.walls[neighbor_row][neighbor_col]:
                     wall_penalty += 1
 
-        return base_distance + wall_penalty * 0.3  # Adjust weight for penalty
+        return base_distance # Adjust weight for penalty
 
 
 

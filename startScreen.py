@@ -11,6 +11,10 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QDialog,
 )
+
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimediaWidgets import QVideoWidget
+from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QPixmap, QMovie
 from PyQt5.QtCore import Qt
 
@@ -20,11 +24,28 @@ from drawCustomMap import DrawCustomMap
 
 
 
+
 class MazeSolverApp(QMainWindow):
     def __init__(self, bg_image_path):
         super().__init__()
         self.setWindowTitle("Maze Solver")
-        self.setFixedSize(1200, 800)  # Set window size
+        self.setFixedSize(1200, 800)
+
+        # Sound effects and music setup
+        self.hover_sound = QMediaPlayer()
+        self.hover_sound.setMedia(QMediaContent(QUrl.fromLocalFile("hover1.mp3")))  # Replace with your hover sound file
+
+        self.click_sound = QMediaPlayer()
+        self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile("click.mp3")))  # Replace with your click sound file
+
+        # Background music setup
+        self.background_music = QMediaPlayer()
+        self.background_music.setMedia(QMediaContent(QUrl.fromLocalFile("background_music.mp3")))  # Replace with your music file path
+        self.background_music.setVolume(50)
+        self.background_music.play()
+
+        # Connect the stateChanged signal to restart music when it finishes
+        self.background_music.stateChanged.connect(self.loop_background_music)
 
         # Central widget and layout
         self.central_widget = QWidget(self)
@@ -80,6 +101,10 @@ class MazeSolverApp(QMainWindow):
 
         # Add overlay layout to main layout
         self.layout.addWidget(self.overlay_widget)
+        
+    def loop_background_music(self, state):
+        if state == QMediaPlayer.StoppedState:  # If the music stops
+            self.background_music.play()        # Replay the music
 
     def add_button(self, text, command):
         button = QPushButton(text, self.overlay_widget)
@@ -102,21 +127,28 @@ class MazeSolverApp(QMainWindow):
             """
         )
         button.setFixedSize(600, 60)
-        button.clicked.connect(command)
+
+        # Connect button events to sound effects
+        button.enterEvent = lambda event: self.hover_sound.play()
+        button.clicked.connect(lambda: self.play_click_sound(command))
+
         self.overlay_layout.addWidget(button)
 
+    def play_click_sound(self, command):
+        self.click_sound.play()
+        command()
+
     def play_with_random_map(self):
-        self.close()  # Close the current window
-        maze_file = "maze.txt"  # Example random maze file
+        self.close()
+        maze_file = "maze.txt"
         if os.path.exists(maze_file):
             maze = visualizeState.Maze(maze_file)
-            self.maze_app = visualizeState.MazeApp(maze)  # Instantiate the new MazeApp
-            self.maze_app.show()  # Use show() to display the PyQt5 application
+            self.maze_app = visualizeState.MazeApp(maze)
+            self.maze_app.show()
         else:
             QMessageBox.critical(self, "Error", "Random maze file not found!")
 
     def draw_custom_map(self):
-        # Check if the custom map window is already open
         if hasattr(self, 'custom_map_window') and self.custom_map_window.isVisible():
             self.custom_map_window.activateWindow()
         else:
@@ -136,8 +168,8 @@ class MazeSolverApp(QMainWindow):
     def load_selected_map(self, file_path):
         if os.path.exists(file_path):
             maze = visualizeState.Maze(file_path)
-            self.maze_app = visualizeState.MazeApp(maze)  # Instantiate the new MazeApp
-            self.maze_app.show()  # Use show() instead of mainloop()
+            self.maze_app = visualizeState.MazeApp(maze)
+            self.maze_app.show()
         else:
             QMessageBox.critical(self, "Error", "Map file not found!")
 

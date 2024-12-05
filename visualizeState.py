@@ -7,13 +7,17 @@ from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsRectItem, QLineEdit, QMessageBox, QListWidget, QGraphicsEllipseItem,
     QGraphicsPixmapItem
 )
-
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimediaWidgets import QVideoWidget
+from PyQt5.QtCore import QUrl
 from PyQt5.QtCore import Qt, QTimer,QSize
 from PyQt5.QtGui import QColor, QBrush, QPen, QPixmap, QMovie
 from MapSelectorDialog import MapSelectorDialog  # Import the separate class
 from algorithms import Maze  # Assuming Maze class is implemented separately
 from editMap import EditMaze
 from report_window import ReportWindow  # Import the ReportWindow class
+
+
 class MazeApp(QMainWindow):
     def __init__(self, maze):
         super().__init__()
@@ -32,6 +36,13 @@ class MazeApp(QMainWindow):
         self.maze = maze
         self.solution_path = []  # Initialize the solution path list
         self.stop_requested = False
+        
+        # Sound effects and music setup
+        self.hover_sound = QMediaPlayer()
+        self.hover_sound.setMedia(QMediaContent(QUrl.fromLocalFile("hover1.mp3")))  # Replace with your hover sound file
+
+        self.click_sound = QMediaPlayer()
+        self.click_sound.setMedia(QMediaContent(QUrl.fromLocalFile("click.mp3")))  # Replace with your click sound file
 
     def init_ui(self):
         # Main widget and layout
@@ -89,8 +100,8 @@ class MazeApp(QMainWindow):
         # Zoom Controls
         self.zoom_layout = QHBoxLayout()
         self.main_layout.addLayout(self.zoom_layout)
-        self.add_button(self.zoom_layout, "Zoom In", self.zoom_in)
-        self.add_button(self.zoom_layout, "Zoom Out", self.zoom_out)
+        self.add_button(self.zoom_layout, "Zoom In", self.zoom_in, lambda: None)
+        self.add_button(self.zoom_layout, "Zoom Out", self.zoom_out, lambda: None)
         
         # Status Label
         self.status_label = QLabel("Welcome to Maze Solver", self)
@@ -105,13 +116,19 @@ class MazeApp(QMainWindow):
         self.setup_original_buttons()
 
 
-    def add_button(self, layout, text, function):
+    def add_button(self, layout, text, function, command=lambda: None):
         """Helper function to add buttons to a layout."""
         button = QPushButton(text)
         button.setStyleSheet(self.button_style())
         button.clicked.connect(function)
+        # Connect button events to sound effects
+        button.enterEvent = lambda event: self.hover_sound.play()
+        button.clicked.connect(lambda: self.play_click_sound(command))
         layout.addWidget(button)
-
+        
+    def play_click_sound(self, command):
+            self.click_sound.play()
+            command()
     def button_style(self):
         """Returns a shared button style with hover effects."""
         return """
@@ -525,14 +542,14 @@ class MazeApp(QMainWindow):
         self.algorithm_dropdown.setStyleSheet("font-size: 14px; padding: 5px;")
         self.controls_layout.addWidget(self.algorithm_dropdown)
         """Restores the original control buttons."""
-        self.add_button(self.controls_layout, "Apply Algorithm", self.apply_algorithm)
-        self.add_button(self.controls_layout, "Generate Maze", self.generate_maze)
-        self.add_button(self.controls_layout, "Save Map", self.save_map)
-        self.add_button(self.controls_layout, "Play Mode", self.start_play_mode)
-        self.add_button(self.controls_layout, "Load Map", self.load_map)
-        self.add_button(self.controls_layout, "Edit", self.edit_maze)
-        self.add_button(self.controls_layout, "Analyze", self.analyze_algorithms)
-        self.add_button(self.controls_layout, "Exit", self.close)
+        self.add_button(self.controls_layout, "Apply Algorithm", self.apply_algorithm, lambda: None)
+        self.add_button(self.controls_layout, "Generate Maze", self.generate_maze, lambda: None)
+        self.add_button(self.controls_layout, "Save Map", self.save_map, lambda: None)
+        self.add_button(self.controls_layout, "Play Mode", self.start_play_mode, lambda: None)
+        self.add_button(self.controls_layout, "Load Map", self.load_map, lambda: None)
+        self.add_button(self.controls_layout, "Edit", self.edit_maze, lambda: None)
+        self.add_button(self.controls_layout, "Analyze", self.analyze_algorithms, lambda: None)
+        self.add_button(self.controls_layout, "Exit", self.close, lambda: None)
 
     from report_window import ReportWindow  # Import the ReportWindow class
     
